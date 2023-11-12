@@ -7,7 +7,7 @@ import re
 import subprocess
 import sys
 import time
-import urllib2
+import urllib.request as ulr
 
 from lxml import etree
 
@@ -49,14 +49,14 @@ def add_options():
 
 def install_proxy():
     if hasattr(conf, 'HTTP_PROXY'):
-        proxy = urllib2.ProxyHandler({'http': conf.HTTP_PROXY})
-        opener = urllib2.build_opener(proxy)
-        urllib2.install_opener(opener)
+        proxy = ulr.ProxyHandler({'http': conf.HTTP_PROXY})
+        opener = ulr.build_opener(proxy)
+        ulr.install_opener(opener)
 
 
 def download_contest(contest_id):
     contest_url = '/'.join((CODEFORCES_URL, 'contest', contest_id))
-    contest_page = urllib2.urlopen(contest_url)
+    contest_page = ulr.urlopen(contest_url)
     tree = etree.HTML(contest_page.read())
     for i in tree.xpath(
             ".//table[contains(@class, 'problems')]"
@@ -70,7 +70,7 @@ def download_problem(contest_id, problem_id):
 
     problem_url = '/'.join(
         (CODEFORCES_URL, 'contest', contest_id, 'problem', problem_id))
-    problem_page = urllib2.urlopen(problem_url)
+    problem_page = ulr.urlopen(problem_url)
     tree = etree.HTML(problem_page.read())
 
     title = tree.xpath(

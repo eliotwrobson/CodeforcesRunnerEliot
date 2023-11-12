@@ -1,7 +1,7 @@
 #! /usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from optparse import *
+from optparse import OptionParser
 import os.path
 import re
 import subprocess
@@ -39,7 +39,7 @@ def add_options():
     parser = OptionParser(usage=usage)
     parser.add_option('-c', '--contest', dest='contest_id',
                       help="Download the specific contest. \
-                              If the PROBLEM_ID isn't specific, \
+                              If the PROBLEM_ID isn't specified, \
                               then download all problems in the contest.")
     parser.add_option('-p', '--problem', dest='problem_id',
                       help='Download the specific problem. \
@@ -181,8 +181,8 @@ def main():
     try:
         import conf
     except ImportError, e:
-        print 'conf.py does not exist.'
-        print 'Maybe you should copy `conf.py.example` to `conf.py`.'
+        print("conf.py does not exist.")
+        print("Maybe you should copy `conf.py.example` to `conf.py`.")
         sys.exit(1)
 
     if options.contest_id is not None:

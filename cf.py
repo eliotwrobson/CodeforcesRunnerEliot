@@ -1,17 +1,24 @@
 #! /usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from optparse import OptionParser
+import itertools as it
+import json
 import os.path
 import re
 import subprocess
 import sys
 import time
 import urllib.request as ulr
+from optparse import OptionParser
 
+import lxml.html as lh
+import requests
+from bs4 import BeautifulSoup
 from lxml import etree
 
-CODEFORCES_URL = 'http://codeforces.com'
+# TODO figure out how to avoid the m1,
+# I think this is a cookies issue: https://codeforces.com/blog/entry/63761
+CODEFORCES_URL = "http://codeforces.com"
 EPS = 1e-6
 
 
@@ -21,87 +28,118 @@ class Executer(object):
         self.id = id
 
     def compile(self):
-        if len(self.env['compile']) == 0:
+        if len(self.env["compile"]) == 0:
             return 0
-        return subprocess.call(self.env['compile'].format(self.id), shell=True)
+        return subprocess.call(self.env["compile"].format(self.id), shell=True)
 
     def execute(self):
         return subprocess.Popen(
-            self.env['execute'].format(self.id),
+            self.env["execute"].format(self.id),
             shell=True,
             stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE
+            stdout=subprocess.PIPE,
         )
 
 
 def add_options():
-    usage = '%prog [options] [source code]'
+    usage = "%prog [options] [source code]"
     parser = OptionParser(usage=usage)
-    parser.add_option('-c', '--contest', dest='contest_id',
-                      help="Download the specific contest. \
+    parser.add_option(
+        "-c",
+        "--contest",
+        dest="contest_id",
+        help="Download the specific contest. \
                               If the PROBLEM_ID isn't specified, \
-                              then download all problems in the contest.")
-    parser.add_option('-p', '--problem', dest='problem_id',
-                      help='Download the specific problem. \
-                              The CONTEST_ID is required.')
+                              then download all problems in the contest.",
+    )
+    parser.add_option(
+        "-p",
+        "--problem",
+        dest="problem_id",
+        help="Download the specific problem. \
+                              The CONTEST_ID is required.",
+    )
     return parser.parse_args()
 
 
 def install_proxy():
-    if hasattr(conf, 'HTTP_PROXY'):
-        proxy = ulr.ProxyHandler({'http': conf.HTTP_PROXY})
+    if hasattr(conf, "HTTP_PROXY"):
+        proxy = ulr.ProxyHandler({"http": conf.HTTP_PROXY})
         opener = ulr.build_opener(proxy)
         ulr.install_opener(opener)
 
 
-def download_contest(contest_id):
-    contest_url = '/'.join((CODEFORCES_URL, 'contest', contest_id))
+def download_contest(contest_id: str) -> None:
+    contest_url = "/".join((CODEFORCES_URL, "contest", contest_id))
     contest_page = ulr.urlopen(contest_url)
-    tree = etree.HTML(contest_page.read())
+    tree = lh.document_fromstring(contest_page.read())
     for i in tree.xpath(
-            ".//table[contains(@class, 'problems')]"
-            "//td[contains(@class, 'id')]/a"):
+        ".//table[contains(@class, 'problems')]" "//td[contains(@class, 'id')]/a"
+    ):
         download_problem(contest_id, i.text.strip())
 
 
-def download_problem(contest_id, problem_id):
-    node_to_string = lambda node: ''.join(
-        [node.text] + map(etree.tostring, node.getchildren()))
+def download_problem(contest_id: str, problem_id: str) -> None:
+    # node_to_string = lambda node: "".join(
+    #    it.chain([node.text], map(etree.tostring, node.getchildren()))
+    # )
 
-    problem_url = '/'.join(
-        (CODEFORCES_URL, 'contest', contest_id, 'problem', problem_id))
-    problem_page = ulr.urlopen(problem_url)
-    tree = etree.HTML(problem_page.read())
+    problem_url = "/".join(
+        (CODEFORCES_URL, "contest", contest_id, "problem", problem_id)
+    )
 
-    title = tree.xpath(
-        './/div[contains(@class, "problem-statement")]'
-        '/div/div[contains(@class, "title")]')[0].text
-    name = title[3:]
+    # base_page = requests.get(problem_url)
+    # data = base_page.text
+    # soup = BeautifulSoup(data, "lxml")
+    # print(soup)
+    print(problem_url)
+    # problem_page = ulr.urlopen(problem_url)
 
-    filename = conf.PATTERN.format(
-        id=problem_id, name=name, contest=contest_id)
-    filename = re.sub(
-        r'upper\((.*?)\)', lambda x: x.group(1).upper(), filename)
-    filename = re.sub(
-        r'lower\((.*?)\)', lambda x: x.group(1).lower(), filename)
-    filename = filename.replace(' ', conf.REPLACE_SPACE)
-    filename += conf.EXTENSION
+    header = {"User-Agent": "Mozilla/5.0"}
 
-    with open(filename, 'w') as f:
-        for (input_node, answer_node) in zip(
-                tree.xpath('.//div[contains(@class, "input")]/pre'),
-                tree.xpath('.//div[contains(@class, "output")]/pre')):
-            f.write('<input>\n')
-            f.write(node_to_string(input_node).replace('<br/>', '\n'))
-            f.write('\n')
-            f.write('</input>\n')
-            f.write('<answer>\n')
-            f.write(node_to_string(answer_node).replace('<br/>', '\n'))
-            f.write('\n')
-            f.write('</answer>\n')
+    req = requests.get(problem_url, headers=header)
 
-    print('contest={0!r}, id={1!r}, problem={2!r} is downloaded.'.format(
-        contest_id, problem_id, name))
+    parser = BeautifulSoup(req.text, "lxml")
+    # tree = etree.HTML(req.text)
+    # print(etree.tostring(tree))
+    # print(tree.xpath("//div[contains(@class, 'problem-statement')]"))
+
+    title = parser.find_all("div", {"class": "title"})
+    # print(title)
+    # title = tree.xpath(
+    #    './/div[contains(@class, "problem-statement")]'
+    #    '/div/div[contains(@class, "title")]'
+    # )[0].text
+    name = title[0].text[3:]
+
+    filename = conf["PATTERN"].format(id=problem_id, name=name, contest=contest_id)
+    filename = re.sub(r"upper\((.*?)\)", lambda x: x.group(1).upper(), filename)
+    filename = re.sub(r"lower\((.*?)\)", lambda x: x.group(1).lower(), filename)
+    filename = filename.replace(" ", conf["REPLACE_SPACE"])
+    filename += conf["EXTENSION"]
+
+    with open(filename, "w") as f:
+        for input_node, answer_node in zip(
+            parser.find_all("div", {"class": "input"}),
+            parser.find_all("div", {"class": "output"}),
+        ):
+            input_field = input_node.find_all("pre")[0].text
+            answer_field = answer_node.find_all("pre")[0].text
+            # TODO replace with better library.
+            f.write("<input>\n")
+            f.write(input_field.replace("<br/>", "\n"))
+            f.write("\n")
+            f.write("</input>\n")
+            f.write("<answer>\n")
+            f.write(answer_field.replace("<br/>", "\n"))
+            f.write("\n")
+            f.write("</answer>\n")
+
+    print(
+        "contest={0!r}, id={1!r}, problem={2!r} is downloaded.".format(
+            contest_id, problem_id, name
+        )
+    )
 
 
 def is_integer(s):
@@ -121,10 +159,10 @@ def is_number(s):
 
 
 def floating_equal(a, b):
-    return abs(a-b) < EPS
+    return abs(a - b) < EPS
 
 
-def check_result(answer_text, output_text):
+def check_result(answer_text: str, output_text: str) -> bool:
     answer_tokens = answer_text.split()
     output_tokens = output_text.split()
     if len(answer_tokens) != len(output_tokens):
@@ -143,12 +181,12 @@ def check_result(answer_text, output_text):
 
 
 def handle_test(executer, case, input_text, answer_text):
-    print('output:')
+    print("output:")
     start = time.time()
     proc = executer.execute()
     proc.stdin.write(input_text)
-    output_text = ''
-    for output_line in iter(proc.stdout.readline, ''):
+    output_text = ""
+    for output_line in iter(proc.stdout.readline, ""):
         print(output_line)
         output_text += output_line
     proc.wait()
@@ -156,32 +194,36 @@ def handle_test(executer, case, input_text, answer_text):
     end = time.time()
 
     if proc.returncode != 0:
-        result = 'RE'
+        result = "RE"
     elif answer_text == output_text:
-        result = 'EXACTLY'
+        result = "EXACTLY"
     elif check_result(answer_text, output_text):
-        result = 'AC'
+        result = "AC"
     else:
-        result = 'WA'
+        result = "WA"
 
-    if result != 'EXACTLY':
-        print('answer:')
+    if result != "EXACTLY":
+        print("answer:")
         print(answer_text)
 
-    print('=== Case #{0}: {1} ({2} ms) ===\n'.format(
-        case, result, int((end-start) * 1000)))
-    if result != 'EXACTLY':
+    print(
+        "=== Case #{0}: {1} ({2} ms) ===\n".format(
+            case, result, int((end - start) * 1000)
+        )
+    )
+    if result != "EXACTLY":
         # TODO was raw input
-        input('press enter to continue or <C-c> to leave.')
+        input("press enter to continue or <C-c> to leave.")
 
 
-def main():
+def main() -> None:
     global options, conf
     (options, args) = add_options()
 
     try:
-        import conf
-    except (ImportError, e):
+        with open("conf.json", "r") as f:
+            conf = json.load(f)
+    except ImportError:
         print("conf.py does not exist.")
         print("Maybe you should copy `conf.py.example` to `conf.py`.")
         sys.exit(1)
@@ -195,7 +237,7 @@ def main():
         sys.exit(0)
 
     if len(args) < 1 or not os.path.exists(args[0]):
-        print('Source code not exist!')
+        print("Source code not exist!")
         sys.exit(1)
 
     id, lang = os.path.splitext(args[0])
@@ -204,17 +246,17 @@ def main():
     ret = executer.compile()
 
     if ret != 0:
-        print('>>> failed to Compile the source code!')
+        print(">>> failed to Compile the source code!")
         sys.exit(1)
 
-    with open('{0}{1}'.format(id, conf.EXTENSION)) as test_file:
-        samples = etree.fromstring(
-            '<samples>{0}</samples>'.format(test_file.read()))
+    with open("{0}{1}".format(id, conf.EXTENSION)) as test_file:
+        samples = etree.fromstring("<samples>{0}</samples>".format(test_file.read()))
         nodes = samples.getchildren()
-        for case in range(len(nodes)/2):
-            input_text = nodes[case*2].text[1:-1]
-            answer_text = nodes[case*2+1].text[1:-1]
+        for case in range(len(nodes) / 2):
+            input_text = nodes[case * 2].text[1:-1]
+            answer_text = nodes[case * 2 + 1].text[1:-1]
             handle_test(executer, case, input_text, answer_text)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

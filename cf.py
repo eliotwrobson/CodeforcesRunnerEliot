@@ -15,6 +15,7 @@ from optparse import OptionParser
 import lxml.html as lh
 import requests
 from bs4 import BeautifulSoup
+from colorama import Back, Fore, Style
 from lxml import etree
 
 CODEFORCES_URL = "http://codeforces.com"
@@ -30,7 +31,7 @@ class Executer(object):
             return 0
         return subprocess.call(self.env["compile"].format(self.id), shell=True)
 
-    def execute(self, input_str: str) -> tuple[str, int, float]:
+    def execute(self, input_str: str) -> tuple[str, str, int, float]:
         proc = subprocess.Popen(
             self.env["execute"].format(self.id),
             shell=True,
@@ -43,7 +44,12 @@ class Executer(object):
         (stdout_data, stderr_data) = proc.communicate(bytes(input_str, "utf-8"))
         proc.wait()
         end = time.perf_counter()
-        return (stdout_data.decode(), proc.returncode, end - start)
+        return (
+            stdout_data.decode(),
+            stderr_data.decode(),
+            proc.returncode,
+            end - start,
+        )
 
 
 def add_options():
@@ -110,13 +116,11 @@ def download_problem(contest_id: str, problem_id: str) -> None:
             input_field = input_node.find_all("pre")[0].text
             answer_field = answer_node.find_all("pre")[0].text
             # TODO replace with better library.
-            f.write("<input>\n")
+            f.write("<input>")
             f.write(input_field.replace("<br/>", "\n"))
-            f.write("\n")
             f.write("</input>\n")
-            f.write("<answer>\n")
+            f.write("<answer>")
             f.write(answer_field.replace("<br/>", "\n"))
-            f.write("\n")
             f.write("</answer>\n")
 
     print(
@@ -163,34 +167,60 @@ def check_result(answer_text: str, output_text: str) -> bool:
     return True
 
 
-def print_center_separated(target_str: str, width: int = 100) -> None:
+def print_center_separated(
+    target_str: str, width: int = 100, color_addons: list[str] = [], delim: str = "="
+) -> None:
     rem_width = (width - len(target_str)) // 2
-    side_thing = "=" * (rem_width - 1)
+    side_thing = delim * (rem_width - 1)
     res = side_thing + " " + target_str + " " + side_thing
+
+    for addon in color_addons:
+        print(addon)
     print(res)
+    print(Style.RESET_ALL)
 
 
-def handle_test(executer: Executer, case, input_text: str, answer_text: str):
-    output_text, return_code, time_taken = executer.execute(input_text)
-    print_center_separated("Output")
-    print(output_text)
+def handle_test(executer: Executer, case, input_text: str, answer_text: str) -> None:
+    output_text, stderr_data, return_code, time_taken = executer.execute(input_text)
+    print_center_separated(
+        f" Case #{case}: ({time_taken*1000:0.2f} ms) ", color_addons=[Fore.MAGENTA]
+    )
+    print("Result: ", end="")
+    # TODO add something to handle TLE cases
     if return_code != 0:
-        result = "RE"
-    elif answer_text == output_text:
-        result = "EXACTLY"
-    elif check_result(answer_text, output_text):
-        result = "AC"
+        print(Fore.RED + "Program did not terminate successfully!" + Style.RESET_ALL)
+        print_center_separated("Captured Standard Error")
+        print(stderr_data)
+
+        print_center_separated("Captured Standard Out")
+        print(output_text)
+    elif output_text.strip() == answer_text.strip():
+        print(Fore.GREEN + "Test case passed!" + Style.RESET_ALL)
     else:
-        result = "WA"
-
-    if result != "EXACTLY":
-        print_center_separated("Answer")
+        print(
+            Fore.RED
+            + "Program output did not match expected output\n"
+            + Style.RESET_ALL
+        )
+        print_center_separated("Captured Output")
+        print(output_text)
+        print_center_separated("Expected Output")
         print(answer_text)
+        print()
 
-    print_center_separated(f" Case #{case}: {result} ({time_taken*1000:0.2f} ms) ")
-    if result != "EXACTLY":
-        # TODO was raw input
-        input("press enter to continue or <C-c> to leave.")
+    # TODO have some type of correct approximation
+    # elif check_result(answer_text, output_text):
+    #    result = "AC"
+    # else:
+    #    result = "WA"
+
+    # if result != "EXACTLY":
+    #    print_center_separated("Answer")
+    #    print(answer_text)
+
+    # TODO add CL option to prompt for next thing
+    # if result != "EXACTLY":
+    #    input("press enter to continue or <C-c> to leave.")
 
 
 def main() -> None:
@@ -230,8 +260,8 @@ def main() -> None:
         samples = etree.fromstring("<samples>{0}</samples>".format(test_file.read()))
         nodes = samples.getchildren()
         for case in range(len(nodes) // 2):
-            input_text = nodes[case * 2].text[1:-1]
-            answer_text = nodes[case * 2 + 1].text[1:-1]
+            input_text = nodes[case * 2].text.strip()
+            answer_text = nodes[case * 2 + 1].text.strip()
             handle_test(executer, case, input_text, answer_text)
 
 

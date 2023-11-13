@@ -3,6 +3,7 @@
 
 import itertools as it
 import json
+import math
 import os.path
 import re
 import subprocess
@@ -16,14 +17,11 @@ import requests
 from bs4 import BeautifulSoup
 from lxml import etree
 
-# TODO figure out how to avoid the m1,
-# I think this is a cookies issue: https://codeforces.com/blog/entry/63761
 CODEFORCES_URL = "http://codeforces.com"
-EPS = 1e-6
 
 
 class Executer(object):
-    def __init__(self, env, id):
+    def __init__(self, env, id) -> None:
         self.env = env
         self.id = id
 
@@ -32,13 +30,20 @@ class Executer(object):
             return 0
         return subprocess.call(self.env["compile"].format(self.id), shell=True)
 
-    def execute(self):
-        return subprocess.Popen(
+    def execute(self, input_str: str) -> tuple[str, int, float]:
+        proc = subprocess.Popen(
             self.env["execute"].format(self.id),
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
+
+        start = time.perf_counter()
+        (stdout_data, stderr_data) = proc.communicate(bytes(input_str, "utf-8"))
+        proc.wait()
+        end = time.perf_counter()
+        return (stdout_data.decode(), proc.returncode, end - start)
 
 
 def add_options():
@@ -80,36 +85,15 @@ def download_contest(contest_id: str) -> None:
 
 
 def download_problem(contest_id: str, problem_id: str) -> None:
-    # node_to_string = lambda node: "".join(
-    #    it.chain([node.text], map(etree.tostring, node.getchildren()))
-    # )
-
     problem_url = "/".join(
         (CODEFORCES_URL, "contest", contest_id, "problem", problem_id)
     )
 
-    # base_page = requests.get(problem_url)
-    # data = base_page.text
-    # soup = BeautifulSoup(data, "lxml")
-    # print(soup)
-    print(problem_url)
-    # problem_page = ulr.urlopen(problem_url)
-
-    header = {"User-Agent": "Mozilla/5.0"}
-
-    req = requests.get(problem_url, headers=header)
+    req = requests.get(problem_url, headers={"User-Agent": "Mozilla/5.0"})
 
     parser = BeautifulSoup(req.text, "lxml")
-    # tree = etree.HTML(req.text)
-    # print(etree.tostring(tree))
-    # print(tree.xpath("//div[contains(@class, 'problem-statement')]"))
 
     title = parser.find_all("div", {"class": "title"})
-    # print(title)
-    # title = tree.xpath(
-    #    './/div[contains(@class, "problem-statement")]'
-    #    '/div/div[contains(@class, "title")]'
-    # )[0].text
     name = title[0].text[3:]
 
     filename = conf["PATTERN"].format(id=problem_id, name=name, contest=contest_id)
@@ -142,7 +126,7 @@ def download_problem(contest_id: str, problem_id: str) -> None:
     )
 
 
-def is_integer(s):
+def is_integer(s: str) -> bool:
     try:
         int(s)
     except ValueError:
@@ -150,7 +134,7 @@ def is_integer(s):
     return True
 
 
-def is_number(s):
+def is_number(s: str) -> bool:
     try:
         float(s)
     except ValueError:
@@ -158,10 +142,7 @@ def is_number(s):
     return True
 
 
-def floating_equal(a, b):
-    return abs(a - b) < EPS
-
-
+# TODO replace with difflib
 def check_result(answer_text: str, output_text: str) -> bool:
     answer_tokens = answer_text.split()
     output_tokens = output_text.split()
@@ -172,7 +153,9 @@ def check_result(answer_text: str, output_text: str) -> bool:
             if int(answer_token) != int(output_token):
                 return False
         elif is_number(answer_token) and is_number(output_token):
-            if not floating_equal(float(answer_token), float(output_token)):
+            if not math.isclose(
+                float(answer_token), float(output_token), abs_tol=10 ** (-6)
+            ):
                 return False
         else:
             if answer_token != output_token:
@@ -180,20 +163,18 @@ def check_result(answer_text: str, output_text: str) -> bool:
     return True
 
 
-def handle_test(executer, case, input_text, answer_text):
-    print("output:")
-    start = time.time()
-    proc = executer.execute()
-    proc.stdin.write(input_text)
-    output_text = ""
-    for output_line in iter(proc.stdout.readline, ""):
-        print(output_line)
-        output_text += output_line
-    proc.wait()
-    print
-    end = time.time()
+def print_center_separated(target_str: str, width: int = 100) -> None:
+    rem_width = (width - len(target_str)) // 2
+    side_thing = "=" * (rem_width - 1)
+    res = side_thing + " " + target_str + " " + side_thing
+    print(res)
 
-    if proc.returncode != 0:
+
+def handle_test(executer: Executer, case, input_text: str, answer_text: str):
+    output_text, return_code, time_taken = executer.execute(input_text)
+    print_center_separated("Output")
+    print(output_text)
+    if return_code != 0:
         result = "RE"
     elif answer_text == output_text:
         result = "EXACTLY"
@@ -203,14 +184,10 @@ def handle_test(executer, case, input_text, answer_text):
         result = "WA"
 
     if result != "EXACTLY":
-        print("answer:")
+        print_center_separated("Answer")
         print(answer_text)
 
-    print(
-        "=== Case #{0}: {1} ({2} ms) ===\n".format(
-            case, result, int((end - start) * 1000)
-        )
-    )
+    print_center_separated(f" Case #{case}: {result} ({time_taken*1000:0.2f} ms) ")
     if result != "EXACTLY":
         # TODO was raw input
         input("press enter to continue or <C-c> to leave.")
@@ -241,7 +218,7 @@ def main() -> None:
         sys.exit(1)
 
     id, lang = os.path.splitext(args[0])
-    executer = Executer(conf.ENV[lang], id)
+    executer = Executer(conf["ENV"][lang], id)
 
     ret = executer.compile()
 
@@ -249,10 +226,10 @@ def main() -> None:
         print(">>> failed to Compile the source code!")
         sys.exit(1)
 
-    with open("{0}{1}".format(id, conf.EXTENSION)) as test_file:
+    with open("{0}{1}".format(id, conf["EXTENSION"])) as test_file:
         samples = etree.fromstring("<samples>{0}</samples>".format(test_file.read()))
         nodes = samples.getchildren()
-        for case in range(len(nodes) / 2):
+        for case in range(len(nodes) // 2):
             input_text = nodes[case * 2].text[1:-1]
             answer_text = nodes[case * 2 + 1].text[1:-1]
             handle_test(executer, case, input_text, answer_text)

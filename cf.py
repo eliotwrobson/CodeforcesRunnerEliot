@@ -9,16 +9,21 @@ import re
 import subprocess
 import sys
 import time
+import typing as t
 import urllib.request as ulr
 from optparse import OptionParser
 
+import click
 import lxml.html as lh
 import requests
 from bs4 import BeautifulSoup
 from colorama import Back, Fore, Style
 from lxml import etree
 
+ProblemType = t.Literal["A", "B", "C", "D", "E", "F", "G", "H"]
+
 CODEFORCES_URL = "http://codeforces.com"
+CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
 class Executer(object):
@@ -73,13 +78,6 @@ def add_options():
     return parser.parse_args()
 
 
-def install_proxy():
-    if hasattr(conf, "HTTP_PROXY"):
-        proxy = ulr.ProxyHandler({"http": conf.HTTP_PROXY})
-        opener = ulr.build_opener(proxy)
-        ulr.install_opener(opener)
-
-
 def download_contest(contest_id: str) -> None:
     contest_url = "/".join((CODEFORCES_URL, "contest", contest_id))
     contest_page = ulr.urlopen(contest_url)
@@ -90,9 +88,18 @@ def download_contest(contest_id: str) -> None:
         download_problem(contest_id, i.text.strip())
 
 
-def download_problem(contest_id: str, problem_id: str) -> None:
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.option("-c", "--contest-id", help="Contest ID to download.", type=int)
+@click.option(
+    "-p",
+    "--problem-id",
+    help="Problem ID to download.",
+    type=click.Choice(t.get_args(ProblemType), case_sensitive=False),
+    default=None,
+)
+def download_problem(contest_id: int, problem_id: ProblemType | None) -> None:
     problem_url = "/".join(
-        (CODEFORCES_URL, "contest", contest_id, "problem", problem_id)
+        (CODEFORCES_URL, "contest", str(contest_id), "problem", problem_id)
     )
 
     req = requests.get(problem_url, headers={"User-Agent": "Mozilla/5.0"})
@@ -174,18 +181,23 @@ def print_center_separated(
     side_thing = delim * (rem_width - 1)
     res = side_thing + " " + target_str + " " + side_thing
 
-    for addon in color_addons:
-        print(addon)
-    print(res)
-    print(Style.RESET_ALL)
+    if len(res) < width:
+        res += delim
+
+    addon_str = "".join(color_addons)
+    print(addon_str + res + Style.RESET_ALL)
 
 
-def handle_test(executer: Executer, case, input_text: str, answer_text: str) -> None:
+def handle_test(executer: Executer, case, input_text: str, answer_text: str) -> bool:
+    """Returns true if case was successful."""
     output_text, stderr_data, return_code, time_taken = executer.execute(input_text)
     print_center_separated(
         f" Case #{case}: ({time_taken*1000:0.2f} ms) ", color_addons=[Fore.MAGENTA]
     )
     print("Result: ", end="")
+
+    return_status = False
+
     # TODO add something to handle TLE cases
     if return_code != 0:
         print(Fore.RED + "Program did not terminate successfully!" + Style.RESET_ALL)
@@ -196,6 +208,7 @@ def handle_test(executer: Executer, case, input_text: str, answer_text: str) -> 
         print(output_text)
     elif output_text.strip() == answer_text.strip():
         print(Fore.GREEN + "Test case passed!" + Style.RESET_ALL)
+        return_status = True
     else:
         print(
             Fore.RED
@@ -208,6 +221,7 @@ def handle_test(executer: Executer, case, input_text: str, answer_text: str) -> 
         print(answer_text)
         print()
 
+    return return_status
     # TODO have some type of correct approximation
     # elif check_result(answer_text, output_text):
     #    result = "AC"
@@ -236,7 +250,8 @@ def main() -> None:
         sys.exit(1)
 
     if options.contest_id is not None:
-        install_proxy()
+        # TODO the old version used a proxy, try reimplementing later?
+        # install_proxy()
         if options.problem_id is not None:
             download_problem(options.contest_id, options.problem_id)
         else:
@@ -258,13 +273,23 @@ def main() -> None:
 
     with open("{0}{1}".format(id, conf["EXTENSION"])) as test_file:
         samples = etree.fromstring("<samples>{0}</samples>".format(test_file.read()))
-        nodes = samples.getchildren()
-        nodes_iter = iter(nodes)
-        for case in range(len(nodes) // 2):
-            input_text = next(nodes_iter).text.strip()
-            answer_text = next(nodes_iter).text.strip()
-            handle_test(executer, case, input_text, answer_text)
+
+    nodes = samples.getchildren()
+    nodes_iter = iter(nodes)
+    total_cases = len(nodes) // 2
+    num_successes = 0
+    for case in range(total_cases):
+        input_text = next(nodes_iter).text.strip()
+        answer_text = next(nodes_iter).text.strip()
+        success = handle_test(executer, case, input_text, answer_text)
+        if success:
+            num_successes += 1
+
+    print_center_separated("Summary")
+    print(f"{num_successes} test cases out of {total_cases} passed.")
+    print_center_separated("End of Results")
 
 
 if __name__ == "__main__":
-    main()
+    download_problem()
+    # main()

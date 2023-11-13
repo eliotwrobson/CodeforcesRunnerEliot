@@ -259,9 +259,10 @@ def main() -> None:
     with open("{0}{1}".format(id, conf["EXTENSION"])) as test_file:
         samples = etree.fromstring("<samples>{0}</samples>".format(test_file.read()))
         nodes = samples.getchildren()
+        nodes_iter = iter(nodes)
         for case in range(len(nodes) // 2):
-            input_text = nodes[case * 2].text.strip()
-            answer_text = nodes[case * 2 + 1].text.strip()
+            input_text = next(nodes_iter).text.strip()
+            answer_text = next(nodes_iter).text.strip()
             handle_test(executer, case, input_text, answer_text)
 
 

@@ -24,6 +24,7 @@ ProblemType = t.Literal["A", "B", "C", "D", "E", "F", "G", "H"]
 
 CODEFORCES_URL = "http://codeforces.com"
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 class Executer(object):
@@ -78,18 +79,46 @@ def add_options():
     return parser.parse_args()
 
 
-def download_contest(contest_id: str) -> None:
-    contest_url = "/".join((CODEFORCES_URL, "contest", contest_id))
-    contest_page = ulr.urlopen(contest_url)
-    tree = lh.document_fromstring(contest_page.read())
-    for i in tree.xpath(
-        ".//table[contains(@class, 'problems')]" "//td[contains(@class, 'id')]/a"
-    ):
-        download_problem(contest_id, i.text.strip())
+def get_parser_for_page(contest_id: str, problem_id: str | None) -> BeautifulSoup:
+    if problem_id is None:
+        url_tuple = (CODEFORCES_URL, "contest", contest_id)
+    else:
+        url_tuple = (CODEFORCES_URL, "contest", contest_id, "problem", problem_id)
+
+    contest_url = "/".join(url_tuple)
+    req = requests.get(contest_url, headers=REQUEST_HEADERS)
+    parser = BeautifulSoup(req.text, "lxml")
+
+    return parser
 
 
-@click.command(context_settings=CONTEXT_SETTINGS)
-@click.option("-c", "--contest-id", help="Contest ID to download.", type=int)
+def get_problem_ids(contest_id: str) -> None:
+    parser = get_parser_for_page()
+    table_entries = parser.find("table", {"class": "problems"}).find_all(
+        "td", {"class": "id"}
+    )
+
+    return [entry.text.strip() for entry in table_entries]
+
+
+@click.group(context_settings=CONTEXT_SETTINGS)
+@click.option("-cfn", "--config-file-name", default="conf.json")
+@click.pass_context
+def cli(context: click.Context, config_file_name: str) -> None:
+    context.ensure_object(dict)
+
+    with open(config_file_name, "r") as f:
+        conf = json.load(f)
+
+    context.obj = conf
+
+    # print(context.obj)
+
+
+@cli.command(context_settings=CONTEXT_SETTINGS)
+@click.option(
+    "-c", "--contest-id", help="Contest ID to download.", type=int, required=True
+)
 @click.option(
     "-p",
     "--problem-id",
@@ -97,44 +126,50 @@ def download_contest(contest_id: str) -> None:
     type=click.Choice(t.get_args(ProblemType), case_sensitive=False),
     default=None,
 )
-def download_problem(contest_id: int, problem_id: ProblemType | None) -> None:
-    problem_url = "/".join(
-        (CODEFORCES_URL, "contest", str(contest_id), "problem", problem_id)
-    )
+@click.pass_context
+def download_problem(
+    context: click.Context, contest_id: int, problem_id: ProblemType | None
+) -> None:
+    contest_id_str = str(contest_id)
 
-    req = requests.get(problem_url, headers={"User-Agent": "Mozilla/5.0"})
+    if problem_id is None:
+        problem_ids = get_problem_ids(contest_id_str)
+    else:
+        problem_ids = [problem_id]
 
-    parser = BeautifulSoup(req.text, "lxml")
+    for curr_problem_id in problem_ids:
+        parser = get_parser_for_page(contest_id_str, curr_problem_id)
 
-    title = parser.find_all("div", {"class": "title"})
-    name = title[0].text[3:]
+        name = parser.find("div", {"class": "title"}).text[3:]
 
-    filename = conf["PATTERN"].format(id=problem_id, name=name, contest=contest_id)
-    filename = re.sub(r"upper\((.*?)\)", lambda x: x.group(1).upper(), filename)
-    filename = re.sub(r"lower\((.*?)\)", lambda x: x.group(1).lower(), filename)
-    filename = filename.replace(" ", conf["REPLACE_SPACE"])
-    filename += conf["EXTENSION"]
-
-    with open(filename, "w") as f:
-        for input_node, answer_node in zip(
-            parser.find_all("div", {"class": "input"}),
-            parser.find_all("div", {"class": "output"}),
-        ):
-            input_field = input_node.find_all("pre")[0].text
-            answer_field = answer_node.find_all("pre")[0].text
-            # TODO replace with better library.
-            f.write("<input>")
-            f.write(input_field.replace("<br/>", "\n"))
-            f.write("</input>\n")
-            f.write("<answer>")
-            f.write(answer_field.replace("<br/>", "\n"))
-            f.write("</answer>\n")
-
-    print(
-        "contest={0!r}, id={1!r}, problem={2!r} is downloaded.".format(
-            contest_id, problem_id, name
+        filename = context.obj["PATTERN"].format(
+            id=problem_id, name=name, contest=contest_id
         )
-    )
+        filename = re.sub(r"upper\((.*?)\)", lambda x: x.group(1).upper(), filename)
+        filename = re.sub(r"lower\((.*?)\)", lambda x: x.group(1).lower(), filename)
+        filename = filename.replace(" ", context.obj["REPLACE_SPACE"])
+        filename += context.obj["EXTENSION"]
+
+        with open(filename, "w") as f:
+            for input_node, answer_node in zip(
+                parser.find_all("div", {"class": "input"}),
+                parser.find_all("div", {"class": "output"}),
+            ):
+                input_field = input_node.find_all("pre")[0].text
+                answer_field = answer_node.find_all("pre")[0].text
+                # TODO replace with better library.
+                f.write("<input>")
+                f.write(input_field.replace("<br/>", "\n"))
+                f.write("</input>\n")
+                f.write("<answer>")
+                f.write(answer_field.replace("<br/>", "\n"))
+                f.write("</answer>\n")
+
+        print(
+            "contest={0!r}, id={1!r}, problem={2!r} is downloaded.".format(
+                contest_id, problem_id, name
+            )
+        )
 
 
 def is_integer(s: str) -> bool:
@@ -291,5 +326,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    download_problem()
+    cli()
+    # download_problem()
     # main()

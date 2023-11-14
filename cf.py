@@ -67,29 +67,8 @@ class Executer(object):
         )
 
 
-def add_options():
-    usage = "%prog [options] [source code]"
-    parser = OptionParser(usage=usage)
-    parser.add_option(
-        "-c",
-        "--contest",
-        dest="contest_id",
-        help="Download the specific contest. \
-                              If the PROBLEM_ID isn't specified, \
-                              then download all problems in the contest.",
-    )
-    parser.add_option(
-        "-p",
-        "--problem",
-        dest="problem_id",
-        help="Download the specific problem. \
-                              The CONTEST_ID is required.",
-    )
-    return parser.parse_args()
-
-
 def get_parser_for_page(
-    contest_id: str, problem_id: str | None
+    contest_id: str, problem_id: str | None = None
 ) -> tuple[BeautifulSoup, str]:
     if problem_id is None:
         url_tuple = (CODEFORCES_URL, "contest", contest_id)
@@ -104,7 +83,7 @@ def get_parser_for_page(
 
 
 def get_problem_ids(contest_id: str) -> None:
-    parser = get_parser_for_page()
+    parser = get_parser_for_page(contest_id)
     table_entries = parser.find("table", {"class": "problems"}).find_all(
         "td", {"class": "id"}
     )
@@ -359,35 +338,5 @@ def handle_test(executer: Executer, case, input_text: str, answer_text: str) -> 
     #    input("press enter to continue or <C-c> to leave.")
 
 
-def main() -> None:
-    """
-    global options, conf
-    (options, args) = add_options()
-
-    try:
-        with open("conf.json", "r") as f:
-            conf = json.load(f)
-    except ImportError:
-        print("conf.py does not exist.")
-        print("Maybe you should copy `conf.py.example` to `conf.py`.")
-        sys.exit(1)
-
-    if options.contest_id is not None:
-        # TODO the old version used a proxy, try reimplementing later?
-        # install_proxy()
-        if options.problem_id is not None:
-            download_problem(options.contest_id, options.problem_id)
-        else:
-            download_contest(options.contest_id)
-        sys.exit(0)
-    """
-
-    if len(args) < 1 or not os.path.exists(args[0]):
-        print("Source code not exist!")
-        sys.exit(1)
-
-
 if __name__ == "__main__":
     cli()
-    # download_problem()
-    # main()

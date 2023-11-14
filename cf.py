@@ -25,23 +25,30 @@ from lxml import etree
 ProblemType = t.Literal["A", "B", "C", "D", "E", "F", "G", "H"]
 
 CODEFORCES_URL = "http://codeforces.com"
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+CONTEXT_SETTINGS = dict(
+    help_option_names=["-h", "--help"], show_default=True, max_content_width=120
+)
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 class Executer(object):
-    def __init__(self, env, id) -> None:
+    def __init__(self, env, id, directory) -> None:
         self.env = env
         self.id = id
+        self.directory = directory
 
     def compile(self):
+        # TODO fix compile command for other languages
         if len(self.env["compile"]) == 0:
             return 0
         return subprocess.call(self.env["compile"].format(self.id), shell=True)
 
     def execute(self, input_str: str) -> tuple[str, str, int, float]:
+        run_command = self.env["execute"].format(
+            problem_directory=self.directory, problem_id=self.id
+        )
         proc = subprocess.Popen(
-            self.env["execute"].format(self.id),
+            run_command,
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -138,7 +145,12 @@ def make_xml_file_tree(parser: BeautifulSoup, url: str) -> etree.ElementTree:
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
-@click.option("-cfn", "--config-file-name", default="conf.json")
+@click.option(
+    "-cfn",
+    "--config-file-name",
+    default="conf.json",
+    help="Name of config file to use.",
+)
 @click.pass_context
 def cli(context: click.Context, config_file_name: str) -> None:
     context.ensure_object(dict)
@@ -149,7 +161,11 @@ def cli(context: click.Context, config_file_name: str) -> None:
     context.obj = conf
 
 
-@cli.command(context_settings=CONTEXT_SETTINGS)
+@cli.command(
+    "dc",
+    help="Download contest or individual problems",
+    context_settings=CONTEXT_SETTINGS,
+)
 @click.option(
     "-c", "--contest-id", help="Contest ID to download.", type=int, required=True
 )
@@ -161,7 +177,7 @@ def cli(context: click.Context, config_file_name: str) -> None:
     default=None,
 )
 @click.pass_context
-def download_problem(
+def download_contest(
     context: click.Context, contest_id: int, problem_id: ProblemType | None
 ) -> None:
     contest_id_str = str(contest_id)
@@ -201,6 +217,46 @@ def download_problem(
                 contest_id, problem_id, name
             )
         )
+
+
+@cli.command("r", context_settings=CONTEXT_SETTINGS)
+@click.argument("filename")
+@click.pass_context
+def run(context: click.Context, filename: str) -> None:
+    """
+    Run code against contest problems.
+
+    FILENAME is the name of the source file to run.
+    Problem to run determined based on file name.
+    Looks in the source folder, determined in the config.
+    """
+    # filepath = os.path.join(, filename)
+
+    id, lang = os.path.splitext(filename)
+    executer = Executer(context.obj["ENV"][lang], id, context.obj["SOURCE_FOLDER_NAME"])
+
+    ret = executer.compile()
+
+    if ret != 0:
+        print(">>> failed to Compile the source code!")
+        sys.exit(1)
+
+    test_file_name = os.path.join(context.obj["CONTEST_FOLDER_NAME"], f"{id}.xml")
+    with open(test_file_name) as test_file:
+        tests = BeautifulSoup(test_file, "xml")
+
+    cases = tests.find("test-cases").find_all("case")
+    num_successes = 0
+    for i, case in enumerate(cases):
+        input_text = case.find("input").text.strip()  # next(nodes_iter).text.strip()
+        answer_text = case.find("output").text.strip()  # next(nodes_iter).text.strip()
+        success = handle_test(executer, i, input_text, answer_text)
+        if success:
+            num_successes += 1
+
+    print_center_separated("Summary")
+    print(f"{num_successes} test cases out of {len(cases)} passed.")
+    print_center_separated("End of Results")
 
 
 def is_integer(s: str) -> bool:
@@ -304,6 +360,7 @@ def handle_test(executer: Executer, case, input_text: str, answer_text: str) -> 
 
 
 def main() -> None:
+    """
     global options, conf
     (options, args) = add_options()
 
@@ -323,37 +380,11 @@ def main() -> None:
         else:
             download_contest(options.contest_id)
         sys.exit(0)
+    """
 
     if len(args) < 1 or not os.path.exists(args[0]):
         print("Source code not exist!")
         sys.exit(1)
-
-    id, lang = os.path.splitext(args[0])
-    executer = Executer(conf["ENV"][lang], id)
-
-    ret = executer.compile()
-
-    if ret != 0:
-        print(">>> failed to Compile the source code!")
-        sys.exit(1)
-
-    with open("{0}{1}".format(id, conf["EXTENSION"])) as test_file:
-        samples = etree.fromstring("<samples>{0}</samples>".format(test_file.read()))
-
-    nodes = samples.getchildren()
-    nodes_iter = iter(nodes)
-    total_cases = len(nodes) // 2
-    num_successes = 0
-    for case in range(total_cases):
-        input_text = next(nodes_iter).text.strip()
-        answer_text = next(nodes_iter).text.strip()
-        success = handle_test(executer, case, input_text, answer_text)
-        if success:
-            num_successes += 1
-
-    print_center_separated("Summary")
-    print(f"{num_successes} test cases out of {total_cases} passed.")
-    print_center_separated("End of Results")
 
 
 if __name__ == "__main__":

@@ -20,6 +20,8 @@ from bs4 import BeautifulSoup
 from colorama import Back, Fore, Style
 from lxml import etree
 
+# TODO use asciimatics for display
+
 ProblemType = t.Literal["A", "B", "C", "D", "E", "F", "G", "H"]
 
 CODEFORCES_URL = "http://codeforces.com"
@@ -79,7 +81,9 @@ def add_options():
     return parser.parse_args()
 
 
-def get_parser_for_page(contest_id: str, problem_id: str | None) -> BeautifulSoup:
+def get_parser_for_page(
+    contest_id: str, problem_id: str | None
+) -> tuple[BeautifulSoup, str]:
     if problem_id is None:
         url_tuple = (CODEFORCES_URL, "contest", contest_id)
     else:
@@ -89,7 +93,7 @@ def get_parser_for_page(contest_id: str, problem_id: str | None) -> BeautifulSou
     req = requests.get(contest_url, headers=REQUEST_HEADERS)
     parser = BeautifulSoup(req.text, "lxml")
 
-    return parser
+    return parser, contest_url
 
 
 def get_problem_ids(contest_id: str) -> None:
@@ -99,6 +103,38 @@ def get_problem_ids(contest_id: str) -> None:
     )
 
     return [entry.text.strip() for entry in table_entries]
+
+
+def make_xml_file_tree(parser: BeautifulSoup, url: str) -> etree.ElementTree:
+    def prepare_test_case_string(strings: t.Iterable[str]) -> str:
+        return "\n" + "\n".join(strings) + "\n"
+
+    # Create the root element
+    page = etree.Element("codeforces-problem")
+
+    # Add the problem URL
+    pageElement = etree.SubElement(page, "url")
+    pageElement.text = url
+
+    # Create the element holding all tests
+    test_cases = etree.SubElement(page, "test-cases")
+
+    for input_node, answer_node in zip(
+        parser.find_all("div", {"class": "input"}),
+        parser.find_all("div", {"class": "output"}),
+    ):
+        test_case = etree.SubElement(test_cases, "case")
+
+        test_input = etree.SubElement(test_case, "input")
+        test_input.text = prepare_test_case_string(input_node.find("pre").strings)
+
+        test_output = etree.SubElement(test_case, "output")
+        test_output.text = prepare_test_case_string(answer_node.find("pre").strings)
+
+    # Return a new document tree
+    doc_tree = etree.ElementTree(page)
+    etree.indent(doc_tree, space="")
+    return doc_tree
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -111,8 +147,6 @@ def cli(context: click.Context, config_file_name: str) -> None:
         conf = json.load(f)
 
     context.obj = conf
-
-    # print(context.obj)
 
 
 @cli.command(context_settings=CONTEXT_SETTINGS)
@@ -132,38 +166,35 @@ def download_problem(
 ) -> None:
     contest_id_str = str(contest_id)
 
+    # First, make directory to store downloaded problems
+    dirname = context.obj["CONTEST_FOLDER_NAME"]
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
+
+    # Next, get problem IDs to download
     if problem_id is None:
         problem_ids = get_problem_ids(contest_id_str)
     else:
         problem_ids = [problem_id]
 
+    # Now, do the download and put the files in the directory
     for curr_problem_id in problem_ids:
-        parser = get_parser_for_page(contest_id_str, curr_problem_id)
+        parser, url = get_parser_for_page(contest_id_str, curr_problem_id)
 
         name = parser.find("div", {"class": "title"}).text[3:]
+        problem_file_name = f"{curr_problem_id}.xml"
+        filename = os.path.join(dirname, problem_file_name)
 
-        filename = context.obj["PATTERN"].format(
-            id=problem_id, name=name, contest=contest_id
-        )
-        filename = re.sub(r"upper\((.*?)\)", lambda x: x.group(1).upper(), filename)
-        filename = re.sub(r"lower\((.*?)\)", lambda x: x.group(1).lower(), filename)
-        filename = filename.replace(" ", context.obj["REPLACE_SPACE"])
-        filename += context.obj["EXTENSION"]
+        # Check with user if they'd like to overwrite old file
+        if os.path.isfile(filename):
+            click.confirm(
+                f"Problem {curr_problem_id} already exists in contest folder. Would you like to overwrite?",
+                abort=True,
+            )
 
-        with open(filename, "w") as f:
-            for input_node, answer_node in zip(
-                parser.find_all("div", {"class": "input"}),
-                parser.find_all("div", {"class": "output"}),
-            ):
-                input_field = input_node.find_all("pre")[0].text
-                answer_field = answer_node.find_all("pre")[0].text
-                # TODO replace with better library.
-                f.write("<input>")
-                f.write(input_field.replace("<br/>", "\n"))
-                f.write("</input>\n")
-                f.write("<answer>")
-                f.write(answer_field.replace("<br/>", "\n"))
-                f.write("</answer>\n")
+        with open(filename, "wb") as f:
+            doc = make_xml_file_tree(parser, url)
+            doc.write(f, xml_declaration=True, encoding="utf-8")
 
         print(
             "contest={0!r}, id={1!r}, problem={2!r} is downloaded.".format(

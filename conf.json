@@ -1,7 +1,5 @@
 {
-  "PATTERN": "upper({id})",
-  "REPLACE_SPACE": "_",
-  "EXTENSION": ".xml",
+  "CONTEST_FOLDER_NAME": "contest_problems",
   "ENV": {
     ".c": {
       "compile": "gcc -static -fno-optimize-sibling-calls -fno-strict-aliasing -fno-asm -lm -s -O2 -m32 -o {0} {0}.c",

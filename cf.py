@@ -1,7 +1,6 @@
 #! /usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import itertools as it
 import json
 import math
 import os
@@ -275,6 +274,7 @@ def run(context: click.Context, problem_id: str) -> None:
     sys.exit(exit_code)
 
 
+"""
 def is_integer(s: str) -> bool:
     try:
         int(s)
@@ -310,6 +310,7 @@ def check_result(answer_text: str, output_text: str) -> bool:
             if answer_token != output_token:
                 return False
     return True
+"""
 
 
 def print_center_separated(

@@ -94,7 +94,7 @@ def get_problem_ids(contest_id: int) -> list[str]:
     return [entry.text.strip() for entry in table_entries]
 
 
-def make_xml_file_tree(parser: bs4.BeautifulSoup, url: str) -> etree.ElementTree:
+def make_xml_file_tree(parser: bs4.BeautifulSoup, url: str) -> etree._ElementTree:
     def prepare_test_case_string(strings: t.Iterable[str]) -> str:
         return "\n" + "\n".join(strings).strip() + "\n"
 
@@ -194,7 +194,11 @@ def download_contest(
     for curr_problem_id in problem_ids:
         parser, url = get_parser_for_page(contest_id, curr_problem_id)
 
-        name = parser.find("div", {"class": "title"}).text[3:]
+        name_tag = parser.find("div", {"class": "title"})
+
+        name = (
+            name_tag.text[3:] if name_tag is not None else f"Problem {curr_problem_id}"
+        )
         problem_file_name = f"{curr_problem_id}.xml"
         filename = os.path.join(dirname, problem_file_name)
 
@@ -211,7 +215,7 @@ def download_contest(
 
         print(
             "contest={0!r}, id={1!r}, problem={2!r} is downloaded.".format(
-                contest_id, problem_id, name
+                contest_id, curr_problem_id, name
             )
         )
 

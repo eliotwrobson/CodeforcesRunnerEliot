@@ -269,7 +269,12 @@ def run(context: click.Context, problem_id: str) -> None:
     with open(test_file_name) as test_file:
         tests = bs4.BeautifulSoup(test_file, "xml")
 
-    cases = tests.find("test-cases").find_all("case")
+    test_cases = tests.find("test-cases")
+
+    if not isinstance(test_cases, bs4.Tag):
+        raise Exception(f'Could not parse test cases from "{test_file_name}"')
+
+    cases = test_cases.find_all("case")
     num_successes = 0
     for i, case in enumerate(cases):
         input_text = case.find("input").text.strip()

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import json
-import math
 import os
 import subprocess
 import sys

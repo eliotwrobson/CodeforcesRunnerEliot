@@ -36,7 +36,7 @@ class Executer(object):
         # TODO fix compile command for other languages
         if len(self.env["compile"]) == 0:
             return 0
-        return subprocess.call(self.env["compile"].format(self.id), shell=True)
+        return subprocess.call(self.env["compile"].format(self.problem_id), shell=True)
 
     def execute(self, input_str: str) -> tuple[str, str, int, float]:
         run_command = self.env["execute"].format(
@@ -66,9 +66,15 @@ def get_parser_for_page(
     contest_id: int, problem_id: str | None = None
 ) -> tuple[BeautifulSoup, str]:
     if problem_id is None:
-        url_tuple = (CODEFORCES_URL, "contest", str(contest_id))
+        url_tuple: tuple = (CODEFORCES_URL, "contest", str(contest_id))
     else:
-        url_tuple = (CODEFORCES_URL, "contest", str(contest_id), "problem", problem_id)
+        url_tuple: tuple = (
+            CODEFORCES_URL,
+            "contest",
+            str(contest_id),
+            "problem",
+            problem_id,
+        )
 
     contest_url = "/".join(url_tuple)
     req = requests.get(contest_url, headers=REQUEST_HEADERS)

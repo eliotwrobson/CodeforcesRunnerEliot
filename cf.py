@@ -4,8 +4,7 @@
 import itertools as it
 import json
 import math
-import os.path
-import re
+import os
 import subprocess
 import sys
 import time
@@ -29,12 +28,12 @@ REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 class Executer(object):
-    def __init__(self, env, id, directory) -> None:
+    def __init__(self, env: str, problem_id: str, directory: str) -> None:
         self.env = env
-        self.id = id
+        self.problem_id = problem_id
         self.directory = directory
 
-    def compile(self):
+    def compile(self) -> int:
         # TODO fix compile command for other languages
         if len(self.env["compile"]) == 0:
             return 0
@@ -42,7 +41,7 @@ class Executer(object):
 
     def execute(self, input_str: str) -> tuple[str, str, int, float]:
         run_command = self.env["execute"].format(
-            problem_directory=self.directory, problem_id=self.id
+            problem_directory=self.directory, problem_id=self.problem_id
         )
         proc = subprocess.Popen(
             run_command,
@@ -211,20 +210,41 @@ def download_contest(
 
 
 @cli.command("r", context_settings=CONTEXT_SETTINGS)
-@click.argument("filename")
+@click.argument("problem_id")
 @click.pass_context
-def run(context: click.Context, filename: str) -> None:
+def run(context: click.Context, problem_id: str) -> None:
     """
     Run code against contest problems.
 
-    FILENAME is the name of the source file to run.
-    Problem to run determined based on file name.
+    PROBLEM_ID is the problem to run in the current folder.
+    Source file to run determined based on file name.
     Looks in the source folder, determined in the config.
     """
     # filepath = os.path.join(, filename)
+    source_folder = context.obj["SOURCE_FOLDER_NAME"]
+    problem_name = problem_id.upper()
+    code_file_names = [
+        f
+        for f in os.listdir(source_folder)
+        if os.path.splitext(f)[0].upper() == problem_name
+    ]
 
-    id, lang = os.path.splitext(filename)
-    executer = Executer(context.obj["ENV"][lang], id, context.obj["SOURCE_FOLDER_NAME"])
+    if len(code_file_names) != 1:
+        if len(code_file_names) > 1:
+            print(
+                f"Multiple source files found for problem {problem_name} "
+                f'in directory "{source_folder}": {",".join(code_file_names)}'
+            )
+        else:
+            print(
+                f"No compatible source file found for problem {problem_name} "
+                f'in directory "{source_folder}".'
+            )
+
+    filename = code_file_names[0]
+
+    lang = os.path.splitext(filename)[1]
+    executer = Executer(context.obj["ENV"][lang], problem_id, source_folder)
 
     ret = executer.compile()
 
@@ -232,15 +252,17 @@ def run(context: click.Context, filename: str) -> None:
         print(">>> failed to Compile the source code!")
         sys.exit(1)
 
-    test_file_name = os.path.join(context.obj["CONTEST_FOLDER_NAME"], f"{id}.xml")
+    test_file_name = os.path.join(
+        context.obj["CONTEST_FOLDER_NAME"], f"{problem_name}.xml"
+    )
     with open(test_file_name) as test_file:
         tests = BeautifulSoup(test_file, "xml")
 
     cases = tests.find("test-cases").find_all("case")
     num_successes = 0
     for i, case in enumerate(cases):
-        input_text = case.find("input").text.strip()  # next(nodes_iter).text.strip()
-        answer_text = case.find("output").text.strip()  # next(nodes_iter).text.strip()
+        input_text = case.find("input").text.strip()
+        answer_text = case.find("output").text.strip()
         success = handle_test(executer, i, input_text, answer_text)
         if success:
             num_successes += 1

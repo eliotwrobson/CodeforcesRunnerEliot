@@ -176,8 +176,8 @@ def download_contest(
         current_contest_files = os.listdir(dirname)
         if current_contest_files:
             click.confirm(
-                f'Downloading contest {contest_id} will delete all problems in contest directory "{dirname}". '
-                "Do you wish to continue?",
+                f"Downloading contest {contest_id} will delete all problems in "
+                f'contest directory "{dirname}". Do you wish to continue?',
                 abort=True,
             )
 
@@ -204,7 +204,8 @@ def download_contest(
         # Check with user if they'd like to overwrite old file
         if os.path.isfile(filename):
             click.confirm(
-                f"Problem {curr_problem_id} already exists in contest folder. Would you like to overwrite?",
+                f"Problem {curr_problem_id} already exists in contest folder. "
+                "Would you like to overwrite?",
                 abort=True,
             )
 

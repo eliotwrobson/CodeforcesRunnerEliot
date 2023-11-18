@@ -10,14 +10,11 @@ import subprocess
 import sys
 import time
 import typing as t
-import urllib.request as ulr
-from optparse import OptionParser
 
 import click
-import lxml.html as lh
 import requests
 from bs4 import BeautifulSoup
-from colorama import Back, Fore, Style
+from colorama import Fore, Style
 from lxml import etree
 
 # TODO use asciimatics for display
@@ -68,12 +65,12 @@ class Executer(object):
 
 
 def get_parser_for_page(
-    contest_id: str, problem_id: str | None = None
+    contest_id: int, problem_id: str | None = None
 ) -> tuple[BeautifulSoup, str]:
     if problem_id is None:
-        url_tuple = (CODEFORCES_URL, "contest", contest_id)
+        url_tuple = (CODEFORCES_URL, "contest", str(contest_id))
     else:
-        url_tuple = (CODEFORCES_URL, "contest", contest_id, "problem", problem_id)
+        url_tuple = (CODEFORCES_URL, "contest", str(contest_id), "problem", problem_id)
 
     contest_url = "/".join(url_tuple)
     req = requests.get(contest_url, headers=REQUEST_HEADERS)
@@ -82,8 +79,8 @@ def get_parser_for_page(
     return parser, contest_url
 
 
-def get_problem_ids(contest_id: str) -> None:
-    parser = get_parser_for_page(contest_id)
+def get_problem_ids(contest_id: int) -> None:
+    parser, _ = get_parser_for_page(contest_id)
     table_entries = parser.find("table", {"class": "problems"}).find_all(
         "td", {"class": "id"}
     )
@@ -93,7 +90,7 @@ def get_problem_ids(contest_id: str) -> None:
 
 def make_xml_file_tree(parser: BeautifulSoup, url: str) -> etree.ElementTree:
     def prepare_test_case_string(strings: t.Iterable[str]) -> str:
-        return "\n" + "\n".join(strings) + "\n"
+        return "\n" + "\n".join(strings).strip() + "\n"
 
     # Create the root element
     page = etree.Element("codeforces-problem")
@@ -159,7 +156,7 @@ def cli(context: click.Context, config_file_name: str) -> None:
 def download_contest(
     context: click.Context, contest_id: int, problem_id: ProblemType | None
 ) -> None:
-    contest_id_str = str(contest_id)
+    # contest_id_str = str(contest_id)
 
     # First, make directory to store downloaded problems
     dirname = context.obj["CONTEST_FOLDER_NAME"]
@@ -168,13 +165,28 @@ def download_contest(
 
     # Next, get problem IDs to download
     if problem_id is None:
-        problem_ids = get_problem_ids(contest_id_str)
+        problem_ids = get_problem_ids(contest_id)
+        # In the case we download a whole contest, we want the problem directory to
+        # be empty. So if it is not, we ask the user if they want us to wipe it.
+        current_contest_files = os.listdir(dirname)
+        if current_contest_files:
+            click.confirm(
+                f'Downloading contest {contest_id} will delete all problems in contest directory "{dirname}". '
+                "Do you wish to continue?",
+                abort=True,
+            )
+
+            for f in current_contest_files:
+                file_name = os.path.join(dirname, f)
+                print(f'Problem file "{file_name}" deleted.')
+                os.remove(file_name)
+
     else:
         problem_ids = [problem_id]
 
     # Now, do the download and put the files in the directory
     for curr_problem_id in problem_ids:
-        parser, url = get_parser_for_page(contest_id_str, curr_problem_id)
+        parser, url = get_parser_for_page(contest_id, curr_problem_id)
 
         name = parser.find("div", {"class": "title"}).text[3:]
         problem_file_name = f"{curr_problem_id}.xml"
@@ -236,6 +248,9 @@ def run(context: click.Context, filename: str) -> None:
     print_center_separated("Summary")
     print(f"{num_successes} test cases out of {len(cases)} passed.")
     print_center_separated("End of Results")
+
+    exit_code = 0 if num_successes == len(cases) else 1
+    sys.exit(exit_code)
 
 
 def is_integer(s: str) -> bool:

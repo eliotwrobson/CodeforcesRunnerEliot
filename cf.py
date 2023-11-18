@@ -9,9 +9,9 @@ import sys
 import time
 import typing as t
 
+import bs4
 import click
 import requests
-from bs4 import BeautifulSoup
 from colorama import Fore, Style
 from lxml import etree
 
@@ -64,11 +64,11 @@ class Executer(object):
 
 def get_parser_for_page(
     contest_id: int, problem_id: str | None = None
-) -> tuple[BeautifulSoup, str]:
+) -> tuple[bs4.BeautifulSoup, str]:
     if problem_id is None:
-        url_tuple: tuple = (CODEFORCES_URL, "contest", str(contest_id))
+        url_tuple: tuple[str, ...] = (CODEFORCES_URL, "contest", str(contest_id))
     else:
-        url_tuple: tuple = (
+        url_tuple = (
             CODEFORCES_URL,
             "contest",
             str(contest_id),
@@ -78,21 +78,23 @@ def get_parser_for_page(
 
     contest_url = "/".join(url_tuple)
     req = requests.get(contest_url, headers=REQUEST_HEADERS)
-    parser = BeautifulSoup(req.text, "lxml")
+    parser = bs4.BeautifulSoup(req.text, "lxml")
 
     return parser, contest_url
 
 
-def get_problem_ids(contest_id: int) -> None:
+def get_problem_ids(contest_id: int) -> list[str]:
     parser, _ = get_parser_for_page(contest_id)
-    table_entries = parser.find("table", {"class": "problems"}).find_all(
-        "td", {"class": "id"}
-    )
+    table = parser.find("table", {"class": "problems"})
 
+    if not isinstance(table, bs4.Tag):
+        raise Exception(f"Web scraping for contest {contest_id} failed!")
+
+    table_entries = table.find_all("td", {"class": "id"})
     return [entry.text.strip() for entry in table_entries]
 
 
-def make_xml_file_tree(parser: BeautifulSoup, url: str) -> etree.ElementTree:
+def make_xml_file_tree(parser: bs4.BeautifulSoup, url: str) -> etree.ElementTree:
     def prepare_test_case_string(strings: t.Iterable[str]) -> str:
         return "\n" + "\n".join(strings).strip() + "\n"
 
@@ -261,7 +263,7 @@ def run(context: click.Context, problem_id: str) -> None:
         context.obj["CONTEST_FOLDER_NAME"], f"{problem_name}.xml"
     )
     with open(test_file_name) as test_file:
-        tests = BeautifulSoup(test_file, "xml")
+        tests = bs4.BeautifulSoup(test_file, "xml")
 
     cases = tests.find("test-cases").find_all("case")
     num_successes = 0

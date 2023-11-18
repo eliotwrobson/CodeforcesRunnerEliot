@@ -343,7 +343,9 @@ def print_center_separated(
     print(addon_str + res + Style.RESET_ALL)
 
 
-def handle_test(executer: Executer, case, input_text: str, answer_text: str) -> bool:
+def handle_test(
+    executer: Executer, case: int, input_text: str, answer_text: str
+) -> bool:
     """Returns true if case was successful."""
     output_text, stderr_data, return_code, time_taken = executer.execute(input_text)
     print_center_separated(

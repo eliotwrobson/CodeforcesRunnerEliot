@@ -27,7 +27,7 @@ REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 class Executer(object):
-    def __init__(self, env: str, problem_id: str, directory: str) -> None:
+    def __init__(self, env: dict[str, str], problem_id: str, directory: str) -> None:
         self.env = env
         self.problem_id = problem_id
         self.directory = directory

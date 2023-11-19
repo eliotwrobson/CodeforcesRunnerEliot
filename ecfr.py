@@ -226,7 +226,7 @@ def download_contest(
                 os.remove(file_name)
 
     else:
-        problem_ids = [problem_id]
+        problem_ids = [problem_id.upper()]
 
     # Now, do the download and put the files in the directory
     for curr_problem_id in problem_ids:
@@ -434,7 +434,7 @@ def start_problem(
     LANGUAGE is the file extension of the desired starter file.
     """
 
-    problem_id = problem_id.upper()
+    problem_name = problem_id.upper()
 
     # Check if we can get the desired starter file.
     starter_files_dir = context.obj["STARTER_DIRECTORY"]
@@ -446,7 +446,7 @@ def start_problem(
 
     source_folder = context.obj["SOURCE_DIRECTORY"]
 
-    filename = problem_id + "." + language
+    filename = problem_name + "." + language
     desired_file_path = os.path.join(source_folder, filename)
 
     # Check with user if they'd like to overwrite old file

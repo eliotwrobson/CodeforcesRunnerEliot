@@ -1,3 +1,4 @@
 *.pyc
-/code_files
-/contest_problems
+/contest_files
+/executables
+/source_files

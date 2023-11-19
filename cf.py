@@ -28,19 +28,18 @@ REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0"}
 class Executer(object):
     def __init__(
         self,
+        *,
         compile_command: str | None,
         execute_command: str,
         problem_id: str,
         source_file_dir: str,
+        executable_file_dir: str,
         extension: str,
     ) -> None:
         self.compile_command = compile_command
         self.execute_command = execute_command
         self.source_file = os.path.join(source_file_dir, problem_id + extension)
-        # TODO add directory to this
-        self.output_file = problem_id
-        # self.problem_id = problem_id
-        # self.directory = directory
+        self.output_file = os.path.join(executable_file_dir, problem_id)
 
     def compile(self) -> subprocess.CompletedProcess:
         # TODO fix compile command for other languages
@@ -184,7 +183,7 @@ def download_contest(
     # contest_id_str = str(contest_id)
 
     # First, make directory to store downloaded problems
-    dirname = context.obj["CONTEST_FOLDER_NAME"]
+    dirname = context.obj["CONTEST_DIRECTORY"]
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
@@ -251,8 +250,9 @@ def run(context: click.Context, problem_id: str) -> None:
     Source file to run determined based on file name.
     Looks in the source folder, determined in the config.
     """
-    # filepath = os.path.join(, filename)
-    source_folder = context.obj["SOURCE_FOLDER_NAME"]
+
+    # First, check for unique source file
+    source_folder = context.obj["SOURCE_DIRECTORY"]
     problem_name = problem_id.upper()
     code_file_names = [
         f
@@ -274,13 +274,19 @@ def run(context: click.Context, problem_id: str) -> None:
 
     filename = code_file_names[0]
 
+    # Get folder to put executables
+    executable_folder = context.obj["EXECUTABLE_DIRECTORY"]
+    if not os.path.exists(executable_folder):
+        os.mkdir(executable_folder)
+
+    # Create executor and do compilation if necessary.
     lang = os.path.splitext(filename)[1]
-    print(context.obj["ENV"][lang])
     executer = Executer(
         compile_command=context.obj["ENV"][lang].get("compile"),
         execute_command=context.obj["ENV"][lang]["execute"],
         problem_id=problem_id,
         source_file_dir=source_folder,
+        executable_file_dir=executable_folder,
         extension=lang,
     )
 
@@ -297,8 +303,9 @@ def run(context: click.Context, problem_id: str) -> None:
         else:
             print(f"Compilation successful for problem {problem_id}.")
 
+    # Open test case file
     test_file_name = os.path.join(
-        context.obj["CONTEST_FOLDER_NAME"], f"{problem_name}.xml"
+        context.obj["CONTEST_DIRECTORY"], f"{problem_name}.xml"
     )
     with open(test_file_name) as test_file:
         tests = bs4.BeautifulSoup(test_file, "xml")
@@ -308,6 +315,7 @@ def run(context: click.Context, problem_id: str) -> None:
     if not isinstance(test_cases, bs4.Tag):
         raise Exception(f'Could not parse test cases from "{test_file_name}"')
 
+    # Finally, execute all test cases and print summary
     cases = test_cases.find_all("case")
     num_successes = 0
     for i, case in enumerate(cases):

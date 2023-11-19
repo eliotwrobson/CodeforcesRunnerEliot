@@ -1,6 +1,7 @@
 {
-  "CONTEST_FOLDER_NAME": "contest_problems",
-  "SOURCE_FOLDER_NAME": "code_files",
+  "CONTEST_DIRECTORY": "contest_files",
+  "SOURCE_DIRECTORY": "source_files",
+  "EXECUTABLE_DIRECTORY": "executables",
   "ENV": {
     ".c": {
       "compile": "gcc -static -fno-optimize-sibling-calls -fno-strict-aliasing -fno-asm -lm -s -O2 -m32 -o {problem_id} {problem_id}.c",

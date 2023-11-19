@@ -11,7 +11,6 @@ import typing as t
 
 import bs4
 import click
-import pkg_resources
 import requests
 from colorama import Fore, Style
 from lxml import etree
@@ -472,5 +471,4 @@ def start_problem(
 def init() -> None:
     """Copy example files into the current working directory."""
 
-    res = pkg_resources.resource_listdir("ecfr", "example")
-    print(res)
+    pass

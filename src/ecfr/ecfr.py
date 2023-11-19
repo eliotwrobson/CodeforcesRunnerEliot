@@ -478,7 +478,14 @@ def init() -> None:
 
     # Based on example from here:
     # https://docs.python.org/3/library/pkgutil.html#pkgutil.get_data
-    pkg_dir = os.path.dirname(sys.modules["ecfr"].__file__)
+    module_loc = sys.modules["ecfr"].__file__
+
+    if module_loc is None:
+        raise FileNotFoundError(
+            "Could not find local example files to initialize from."
+        )
+
+    pkg_dir = os.path.dirname(module_loc)
     example_dir = os.path.join(pkg_dir, "example")
     current_dir = os.getcwd()
     copy_loc = shutil.copytree(example_dir, current_dir, dirs_exist_ok=True)

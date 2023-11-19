@@ -471,4 +471,10 @@ def start_problem(
 def init() -> None:
     """Copy example files into the current working directory."""
 
-    pass
+    # Based on example from here:
+    # https://docs.python.org/3/library/pkgutil.html#pkgutil.get_data
+    pkg_dir = os.path.dirname(sys.modules["ecfr"].__file__)
+    example_dir = os.path.join(pkg_dir, "example")
+
+    shutil.copy(example_dir, ".")
+    print(f'Copied example directory into "{example_dir}"')

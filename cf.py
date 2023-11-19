@@ -26,23 +26,43 @@ REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 class Executer(object):
-    def __init__(self, env: dict[str, str], problem_id: str, directory: str) -> None:
-        self.env = env
-        self.problem_id = problem_id
-        self.directory = directory
+    def __init__(
+        self,
+        compile_command: str | None,
+        execute_command: str,
+        problem_id: str,
+        source_file_dir: str,
+        extension: str,
+    ) -> None:
+        self.compile_command = compile_command
+        self.execute_command = execute_command
+        self.source_file = os.path.join(source_file_dir, problem_id + extension)
+        # TODO add directory to this
+        self.output_file = problem_id
+        # self.problem_id = problem_id
+        # self.directory = directory
 
-    def compile(self) -> int:
+    def compile(self) -> subprocess.CompletedProcess:
         # TODO fix compile command for other languages
-        if len(self.env["compile"]) == 0:
-            return 0
-        return subprocess.call(self.env["compile"].format(self.problem_id), shell=True)
+        if self.compile_command is None:
+            raise ValueError("No compile command was set.")
+
+        compile_command = self.compile_command.format(
+            output_file=self.output_file, source_file=self.source_file
+        )
+
+        # TODO maybe set to capture output if I figure out how to preserve the colors
+        return subprocess.run(
+            compile_command,
+            shell=True,
+        )
 
     def execute(self, input_str: str) -> tuple[str, str, int, float]:
-        run_command = self.env["execute"].format(
-            problem_directory=self.directory, problem_id=self.problem_id
+        execute_command = self.execute_command.format(
+            output_file=self.output_file, source_file=self.source_file
         )
         proc = subprocess.Popen(
-            run_command,
+            execute_command,
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -255,13 +275,27 @@ def run(context: click.Context, problem_id: str) -> None:
     filename = code_file_names[0]
 
     lang = os.path.splitext(filename)[1]
-    executer = Executer(context.obj["ENV"][lang], problem_id, source_folder)
+    print(context.obj["ENV"][lang])
+    executer = Executer(
+        compile_command=context.obj["ENV"][lang].get("compile"),
+        execute_command=context.obj["ENV"][lang]["execute"],
+        problem_id=problem_id,
+        source_file_dir=source_folder,
+        extension=lang,
+    )
 
-    ret = executer.compile()
+    if executer.compile_command is not None:
+        print("Starting Compilation")
+        compile_res = executer.compile()
 
-    if ret != 0:
-        print(">>> failed to Compile the source code!")
-        sys.exit(1)
+        if compile_res.returncode != 0:
+            print(f"Compilation failed for problem {problem_id}.")
+            print("Compilation Command:")
+            print(compile_res.args)
+            sys.exit(1)
+
+        else:
+            print(f"Compilation successful for problem {problem_id}.")
 
     test_file_name = os.path.join(
         context.obj["CONTEST_FOLDER_NAME"], f"{problem_name}.xml"

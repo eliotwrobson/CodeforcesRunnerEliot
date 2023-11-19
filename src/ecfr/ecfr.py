@@ -186,12 +186,9 @@ def cli(context: click.Context, config_file_name: str) -> None:
 
 @cli.command(
     "dc",
-    help="Download contest or individual problems",
     context_settings=CONTEXT_SETTINGS,
 )
-@click.option(
-    "-c", "--contest-id", help="Contest ID to download.", type=int, required=True
-)
+@click.argument("contest_id", type=int)
 @click.option(
     "-p",
     "--problem-id",
@@ -203,6 +200,14 @@ def cli(context: click.Context, config_file_name: str) -> None:
 def download_contest(
     context: click.Context, contest_id: int, problem_id: ProblemType | None
 ) -> None:
+    """
+    Download contest or individual problems.
+
+    CONTEST_ID argument is the contest id to download. The whole contest
+    will be downloaded into a directory as specified in the config file.
+    To only download an individual problem, use the -p flag.
+    """
+
     # First, make directory to store downloaded problems
     dirname = context.obj["CONTEST_DIRECTORY"]
     if not os.path.exists(dirname):

@@ -5,11 +5,11 @@
   "STARTER_DIRECTORY": "starter_files",
   "TIMEOUT": "2",
   "ENV": {
-    ".cpp": {
+    "cpp": {
       "compile": "g++ -static -fno-optimize-sibling-calls -fno-strict-aliasing -lm -s -x c++ -O2 -std=c++11 -D__USE_MINGW_ANSI_STDIO=0 -m32 -o {output_file} {source_file}",
       "execute": "./{output_file}"
     },
-    ".py": {
+    "py": {
       "execute": "python {source_file}"
     }
   }

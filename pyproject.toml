@@ -8,6 +8,9 @@ readme = "README.md"
 packages = [
     {include = "ecfr", from = "src"}
 ]
+exclude = [
+    "src/ecfr/example"
+]
 
 [tool.poetry.scripts]
 ecfr = "ecfr.ecfr:cli"

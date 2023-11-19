@@ -387,7 +387,6 @@ def handle_test(
 
     return_status = False
 
-    # TODO add something to handle TLE cases
     if return_code != 0:
         print(Fore.RED + "Program did not terminate successfully!" + Style.RESET_ALL)
         print_center_separated("Captured Standard Error")

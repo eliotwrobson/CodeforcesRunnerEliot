@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ecfr"
-version = "0.0.5"
+version = "0.0.6"
 description = "A package to make CodeForces contests easier."
 authors = ["Eliot Robson <eliot.robson24@gmail.com>"]
 license = "MIT"
@@ -8,6 +8,8 @@ readme = "README.md"
 packages = [
     {include = "ecfr", from = "src"}
 ]
+# TODO figure out how to prevent creating pycache directory here
+# or improve the copy operation.
 exclude = [
     "src/ecfr/example/starter_files/starter.py"
 ]

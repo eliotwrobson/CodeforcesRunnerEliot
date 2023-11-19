@@ -475,6 +475,7 @@ def init() -> None:
     # https://docs.python.org/3/library/pkgutil.html#pkgutil.get_data
     pkg_dir = os.path.dirname(sys.modules["ecfr"].__file__)
     example_dir = os.path.join(pkg_dir, "example")
+    current_dir = os.getcwd()
+    copy_loc = shutil.copytree(example_dir, current_dir, dirs_exist_ok=True)
 
-    shutil.copy(example_dir, ".")
-    print(f'Copied example directory into "{example_dir}"')
+    print(f'Copied example directory into "{copy_loc}"')

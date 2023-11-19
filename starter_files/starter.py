@@ -5,8 +5,8 @@ from io import BytesIO, IOBase
 BUFSIZ = 8192
 
 
-############ Fast Input Classes ############
-# Fast input code is from: https://codeforces.com/blog/entry/71884?#comment-926229
+# Fast Input Classes
+# From: https://codeforces.com/blog/entry/71884?#comment-926229
 class FastIO(IOBase):
     newlines = 0
 
@@ -55,26 +55,33 @@ if sys.version_info[0] < 3:
     sys.stdin, sys.stdout = FastIO(sys.stdin), FastIO(sys.stdout)
 else:
     sys.stdin, sys.stdout = IOWrapper(sys.stdin), IOWrapper(sys.stdout)
-input = lambda: sys.stdin.readline().rstrip("\r\n")
+input = lambda: sys.stdin.readline().rstrip("\r\n")  # noqa: E731
 
 
-############ Input Functions ############
+# Input Functions
 # From https://codeforces.com/blog/entry/71884
-def inp():
+def inp() -> int:
+    """For integer inputs"""
     return int(input())
 
 
-def inlt():
+def inlt() -> list:
+    """For list inputs"""
     return list(map(int, input().split()))
 
 
-def insr():
+def insr() -> list[str]:
+    """For string inputs, as a list of characters"""
     s = input()
     return list(s[: len(s) - 1])
 
 
-def invr():
+def invr() -> list[int]:
+    """Space separated integer inputs as a list"""
     return map(int, input().split())
+
+
+# Start of user code
 
 
 def main() -> None:

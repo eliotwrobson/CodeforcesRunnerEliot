@@ -1,10 +1,5 @@
 # Installation
-The library `lxml` is needed.  Please reference
-[here](http://lxml.de/installation.html) for more information.
-
-If you are an Debian/Ubuntu user, simply type:
-
-    $ sudo apt-get install python-lxml
+The package is available on PyPI [here](https://pypi.org/).
 
 # Usage
 Using [Codeforces Problem 198A problem

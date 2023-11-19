@@ -3,6 +3,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -201,8 +202,6 @@ def cli(context: click.Context, config_file_name: str) -> None:
 def download_contest(
     context: click.Context, contest_id: int, problem_id: ProblemType | None
 ) -> None:
-    # contest_id_str = str(contest_id)
-
     # First, make directory to store downloaded problems
     dirname = context.obj["CONTEST_DIRECTORY"]
     if not os.path.exists(dirname):
@@ -254,20 +253,21 @@ def download_contest(
             doc.write(f, xml_declaration=True, encoding="utf-8")
 
         print(
-            "contest={0!r}, id={1!r}, problem={2!r} is downloaded.".format(
-                contest_id, curr_problem_id, name
-            )
+            f'contest="{contest_id}", id="{curr_problem_id}", problem="{name}" '
+            "is downloaded."
         )
 
 
 @cli.command("r", context_settings=CONTEXT_SETTINGS)
-@click.argument("problem_id")
+@click.argument(
+    "problem_id", type=click.Choice(t.get_args(ProblemType), case_sensitive=False)
+)
 @click.pass_context
-def run(context: click.Context, problem_id: str) -> None:
+def run(context: click.Context, problem_id: ProblemType) -> None:
     """
     Run code against contest problems.
 
-    PROBLEM_ID is the problem to run in the current folder.
+    The first argument is the problem id to run in the current folder.
     Source file to run determined based on file name.
     Looks in the source folder, determined in the config.
     """
@@ -355,45 +355,6 @@ def run(context: click.Context, problem_id: str) -> None:
     sys.exit(exit_code)
 
 
-"""
-def is_integer(s: str) -> bool:
-    try:
-        int(s)
-    except ValueError:
-        return False
-    return True
-
-
-def is_number(s: str) -> bool:
-    try:
-        float(s)
-    except ValueError:
-        return False
-    return True
-
-
-# TODO replace with difflib
-def check_result(answer_text: str, output_text: str) -> bool:
-    answer_tokens = answer_text.split()
-    output_tokens = output_text.split()
-    if len(answer_tokens) != len(output_tokens):
-        return False
-    for answer_token, output_token in zip(answer_tokens, output_tokens):
-        if is_integer(answer_token) and is_integer(output_token):
-            if int(answer_token) != int(output_token):
-                return False
-        elif is_number(answer_token) and is_number(output_token):
-            if not math.isclose(
-                float(answer_token), float(output_token), abs_tol=10 ** (-6)
-            ):
-                return False
-        else:
-            if answer_token != output_token:
-                return False
-    return True
-"""
-
-
 def print_center_separated(
     target_str: str, width: int = 100, color_addons: list[str] = [], delim: str = "="
 ) -> None:
@@ -436,6 +397,8 @@ def handle_test(
         print(output_text)
     elif time_limit_exceed:
         print(Fore.YELLOW + "Time limit exceeded!" + Style.RESET_ALL)
+    # TODO this direct equality is OK for most problem types, but may be an issue for
+    # problems that deal with floating point numbers. Deal with this use case.
     elif output_text.strip() == answer_text.strip():
         print(Fore.GREEN + "Test case passed!" + Style.RESET_ALL)
         return_status = True
@@ -452,19 +415,56 @@ def handle_test(
         print()
 
     return return_status
-    # TODO have some type of correct approximation
-    # elif check_result(answer_text, output_text):
-    #    result = "AC"
-    # else:
-    #    result = "WA"
 
-    # if result != "EXACTLY":
-    #    print_center_separated("Answer")
-    #    print(answer_text)
 
-    # TODO add CL option to prompt for next thing
-    # if result != "EXACTLY":
-    #    input("press enter to continue or <C-c> to leave.")
+@cli.command("sp", context_settings=CONTEXT_SETTINGS)
+@click.argument(
+    "problem_id", type=click.Choice(t.get_args(ProblemType), case_sensitive=False)
+)
+@click.argument("language")
+@click.pass_context
+def start_problem(
+    context: click.Context, problem_id: ProblemType, language: str
+) -> None:
+    """
+    Create an empty solution file from a starter file in the source files
+    folder.
+
+    The first argument is the problem to create the starter file for.
+    LANGUAGE is the file extension of the desired starter file.
+    """
+
+    problem_id = problem_id.upper()
+
+    # Check if we can get the desired starter file.
+    starter_files_dir = context.obj["STARTER_DIRECTORY"]
+    starter_file_path = os.path.join(starter_files_dir, f"starter.{language}")
+
+    if not os.path.isfile(starter_file_path):
+        print(f'Starter file "{starter_file_path}" not found.')
+        sys.exit(1)
+
+    source_folder = context.obj["SOURCE_DIRECTORY"]
+
+    filename = problem_id + "." + language
+    desired_file_path = os.path.join(source_folder, filename)
+
+    # Check with user if they'd like to overwrite old file
+    if os.path.isfile(desired_file_path):
+        click.confirm(
+            f'Source file "{filename}" already exists in source directory '
+            f'"{source_folder}". Would you like to overwrite?',
+            abort=True,
+        )
+
+    # Make the empty source directory folder if it doesn't already exist.
+    if not os.path.exists(source_folder):
+        os.mkdir(source_folder)
+
+    # Finally, copy the file.
+    shutil.copy(starter_file_path, desired_file_path)
+
+    print(f'New source file "{desired_file_path}" has been created.')
 
 
 if __name__ == "__main__":

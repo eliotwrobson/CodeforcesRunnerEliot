@@ -1,79 +1,93 @@
-# Installation
-The package is available on PyPI [here](https://pypi.org/).
+# ecfr: Eliot's CodeForces Runner
+This command line utility is meant to make it easy to download and
+run programs for use in CodeForces contests. It will automatically
+download contest problems, including sample test cases, and will
+compile and run code against these test cases. A fork of
+[CodeforcesRunner](https://github.com/sayuan/CodeforcesRunner).
 
-# Usage
-Using [Codeforces Problem 198A problem
-](http://codeforces.com/problemset/problem/198/A) as an example.
+Also includes starter files. Meant to be a "batteries included"
+way of doing Codeforces contests.
 
-## Donwload Sample Tests
-The url of this problem is
-<http://codeforces.com/problemset/problem/198/A>.  Please notice the
-**contest_id** is **198** and the **problem_id** is **A**.
+## Installation
+The package is available on PyPI [here](https://pypi.org/). It can
+be installed with the following command:
+```sh
+pip install ecfr
+```
 
-    $ cf.py -c 198 -p A     # download this problem
-    $ cf.py -c 198          # download all problems in this contest
+## Commands
+This command line utility has four commands:
+```sh
+dc    Download contest or individual problems
+init  Copy example files into the current working directory.
+r     Run code against contest problems.
+sp    Create an empty solution file from a starter file in the source files folder.
+```
+Each one has different arguments that can be viewed by looking at the help messages.
 
-There is another url <http://codeforces.com/contest/198/problem/A> which
-indicated the same problem.  You can see the contest_id and problem_id
-is same, so it wouldn't be a problem.
+## Usage
+We will use [Codeforces Contest 198](https://codeforces.com/contest/198)
+as a running example. This will demonstrate the workflow of using `ecfr` as a
+command line utility.
 
-## Running the Tests
-Suppose your source code is named `A.{lang}`, which `{lang}` could be
-`cpp`, `c`, `java` or `py` for the current version.
+### Initialization
+The first thing we must do is create an environment config file and provide
+starter files for languages we would like to use. Fortunately, `ecfr` includes
+a sample config and starter files with reasonable defaults. To use them, we must
+simply navigate to the directory we would like to do the contest in and run
+```sh
+$ ecfr init
+```
 
-Then, simple run `cf.py A.{lang}`, you will get the result like this:
+### Download Sample Tests
+Now that we have starter files and a basic config, we need to download the contest.
+We can download contest 198 using the following command.
+```sh
+$ ecfr dc -c 198
+```
+To download just problem A, we can add the `-p A` arguments. This creates a
+`.xml` for each problem downloaded, including the sample test cases.
+You may add additional test cases by following the format of the `.xml` files.
+By default, these are put into the `contest_files` directory.
 
-    $ cf.py A.java
-    output:
-    2
-    === Case #1: AC (85 ms) ===
+### Starting a Problem
+Now that we have our problem files downloaded, we can start coding. To do this,
+we need to copy a starter file for our desired language and give it a descriptive
+name, according to the problem we will be solving. Let's say we wish to do problem A
+in the contest we downloaded in Python. We can create our file with the following
+command:
+```sh
+$ ecfr sp A py
+```
+This will create a file called `A.py` in the `source_files` directory (the location can
+be set in the config). Here, `py` is the file extension `ecfr` will look for when making
+a copy of the starter file. The directory for starter files can be set in the config file.
 
-    output:
-    2
-    answer:
-    3
-    === Case #2: WA (83 ms) ===
+### Running the Tests
+Once we have our starter file and finish coding, we want to run the tests that we downloaded.
+To do this, we simply run the following command:
+```sh
+$ ecfr r A
+```
+Wit this command, `ecfr` will look in the `source_files` directory for files matching problem
+A. When a file is found, it will automatically compile and run it against all test cases in
+the `A.xml` file.
 
-    press enter to continue or <C-c> to leave.
-    output:
-    Exception in thread "main" java.lang.Exception
-            at A.<init>(A.java:12)
-            at A.main(A.java:18)
-    answer:
-    0
-    === Case #3: RE (95 ms) ===
-
-    press enter to continue or <C-c> to leave.
+### Submitting
+Once all test cases pass, we wish to submit our source file. This is as easy as selecting
+`A.py` and uploading the file on the contest submission page. Make sure to select the
+appropriate programming language. If you are using Python 3, be sure and submit to PyPy3,
+as this generally runs much faster.
 
 ## Configurations
-The file `conf.py' contains the compile & execute commands of support
-languages, so you could add more commands to support more languages
-easily by yourself.
+The file `conf.json' contains the used compile and execute commands. More commands
+can be added for different languages. In addition, names of directories for source files,
+contest files, and executables can be changed.
 
-The section [global] in `conf.py` contains some setting about the *test
-file*'s name.  Since the *source code*'s name and the *test file*'s name
-must be exactly same, you could change these settings to follow your
-naming convension.  For example:
+## About
+This tool is only verified on Linux and is still considered in beta. Once more testing
+has been done and more test cases have been added, we will proceed with a full release.
 
-In the default setting:
-
-    PATTERN = "upper({id})"
-    REPLACE_SPACE = "_"
-    EXTENSION = ".xml"
-
-the filename would be 'A.xml'
-
-Or you could added the *contest id* and *problem's name*: (also notice the
-`replace_space`)
-
-    PATTERN = "{contest}-upper({id})-lower({name})"
-    REPLACE_SPACE = "-"
-    EXTENSION = ".xml"
-
-the filename would be 'A-about-bacteria.xml'
-
-# About
-This tool is only verifiid on Linux now, but I think it could be run on
-other platforms, although it maybe need a little modify.
-
-Please feel free to fork and any suggesions are welcome.
+## Acknowledgements
+Thanks to [sayuan](https://github.com/sayuan) and all of the contributors to the original
+[CodeforcesRunner](https://github.com/sayuan/CodeforcesRunner) project.

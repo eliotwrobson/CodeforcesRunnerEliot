@@ -5,9 +5,12 @@ description = "A package to make CodeForces contests easier."
 authors = ["Eliot Robson <eliot.robson24@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+packages = [
+    {include = "ecfr", from = "src"}
+]
 
 [tool.poetry.scripts]
-ecfr = "ecfr:cli"
+ecfr = "ecfr.ecfr:cli"
 
 [tool.poetry.dependencies]
 python = "^3.11"

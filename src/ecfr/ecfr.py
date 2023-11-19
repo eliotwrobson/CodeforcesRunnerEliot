@@ -11,6 +11,7 @@ import typing as t
 
 import bs4
 import click
+import pkg_resources
 import requests
 from colorama import Fore, Style
 from lxml import etree
@@ -177,10 +178,11 @@ def make_xml_file_tree(parser: bs4.BeautifulSoup, url: str) -> etree._ElementTre
 def cli(context: click.Context, config_file_name: str) -> None:
     context.ensure_object(dict)
 
-    with open(config_file_name, "r") as f:
-        conf = json.load(f)
+    if os.path.isfile(config_file_name):
+        with open(config_file_name, "r") as f:
+            conf = json.load(f)
 
-    context.obj = conf
+        context.obj = conf
 
 
 @cli.command(
@@ -464,3 +466,11 @@ def start_problem(
     shutil.copy(starter_file_path, desired_file_path)
 
     print(f'New source file "{desired_file_path}" has been created.')
+
+
+@cli.command("init", context_settings=CONTEXT_SETTINGS)
+def init() -> None:
+    """Copy example files into the current working directory."""
+
+    res = pkg_resources.resource_listdir("ecfr", "example")
+    print(res)

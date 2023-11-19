@@ -457,7 +457,7 @@ def start_problem(
             abort=True,
         )
 
-    # Make the empty source directory folder if it doesn't already exist.
+    # Make the empty source directory if it doesn't already exist.
     if not os.path.exists(source_folder):
         os.mkdir(source_folder)
 

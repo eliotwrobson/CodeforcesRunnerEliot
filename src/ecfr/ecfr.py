@@ -40,7 +40,7 @@ class Executer(object):
     ) -> None:
         self.compile_command = compile_command
         self.execute_command = execute_command
-        self.source_file = os.path.join(source_file_dir, problem_id + extension)
+        self.source_file = os.path.join(source_file_dir, problem_id + "." + extension)
         self.output_file = os.path.join(executable_file_dir, problem_id)
         self.timeout = timeout
 
@@ -307,7 +307,7 @@ def run(context: click.Context, problem_id: ProblemType) -> None:
         os.mkdir(executable_folder)
 
     # Create executor and do compilation if necessary.
-    lang = os.path.splitext(filename)[1]
+    lang = os.path.splitext(filename)[1][1:]
     executer = Executer(
         compile_command=context.obj["ENV"][lang].get("compile"),
         execute_command=context.obj["ENV"][lang]["execute"],

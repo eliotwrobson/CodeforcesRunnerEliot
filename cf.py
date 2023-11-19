@@ -35,11 +35,13 @@ class Executer(object):
         source_file_dir: str,
         executable_file_dir: str,
         extension: str,
+        timeout: int,
     ) -> None:
         self.compile_command = compile_command
         self.execute_command = execute_command
         self.source_file = os.path.join(source_file_dir, problem_id + extension)
         self.output_file = os.path.join(executable_file_dir, problem_id)
+        self.timeout = timeout
 
     def compile(self) -> subprocess.CompletedProcess:
         # TODO fix compile command for other languages
@@ -56,7 +58,8 @@ class Executer(object):
             shell=True,
         )
 
-    def execute(self, input_str: str) -> tuple[str, str, int, float]:
+    def execute(self, input_str: str) -> tuple[str, str, int, float, bool]:
+        """Execute the subprocess. Returns None in case of a timeout"""
         execute_command = self.execute_command.format(
             output_file=self.output_file, source_file=self.source_file
         )
@@ -69,14 +72,32 @@ class Executer(object):
         )
 
         start = time.perf_counter()
-        (stdout_data, stderr_data) = proc.communicate(bytes(input_str, "utf-8"))
-        proc.wait()
-        end = time.perf_counter()
+        tle = False
+        output_str = ""
+        err_str = ""
+        return_code = 0
+
+        try:
+            (stdout_data, stderr_data) = proc.communicate(
+                input=bytes(input_str, "utf-8"), timeout=self.timeout
+            )
+            proc.wait()
+            end = time.perf_counter()
+
+            # Set variables
+            output_str = stdout_data.decode()
+            err_str = stderr_data.decode()
+            return_code = proc.returncode
+        except subprocess.TimeoutExpired:
+            tle = True
+            end = start + self.timeout
+
         return (
-            stdout_data.decode(),
-            stderr_data.decode(),
-            proc.returncode,
+            output_str,
+            err_str,
+            return_code,
             end - start,
+            tle,
         )
 
 
@@ -288,6 +309,7 @@ def run(context: click.Context, problem_id: str) -> None:
         source_file_dir=source_folder,
         executable_file_dir=executable_folder,
         extension=lang,
+        timeout=int(context.obj["TIMEOUT"]),
     )
 
     if executer.compile_command is not None:
@@ -390,7 +412,13 @@ def handle_test(
     executer: Executer, case: int, input_text: str, answer_text: str
 ) -> bool:
     """Returns true if case was successful."""
-    output_text, stderr_data, return_code, time_taken = executer.execute(input_text)
+    (
+        output_text,
+        stderr_data,
+        return_code,
+        time_taken,
+        time_limit_exceed,
+    ) = executer.execute(input_text)
     print_center_separated(
         f" Case #{case}: ({time_taken*1000:0.2f} ms) ", color_addons=[Fore.MAGENTA]
     )
@@ -406,6 +434,8 @@ def handle_test(
 
         print_center_separated("Captured Standard Out")
         print(output_text)
+    elif time_limit_exceed:
+        print(Fore.YELLOW + "Time limit exceeded!" + Style.RESET_ALL)
     elif output_text.strip() == answer_text.strip():
         print(Fore.GREEN + "Test case passed!" + Style.RESET_ALL)
         return_status = True

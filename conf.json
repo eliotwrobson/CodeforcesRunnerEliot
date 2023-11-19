@@ -2,6 +2,7 @@
   "CONTEST_DIRECTORY": "contest_files",
   "SOURCE_DIRECTORY": "source_files",
   "EXECUTABLE_DIRECTORY": "executables",
+  "TIMEOUT": "2",
   "ENV": {
     ".c": {
       "compile": "gcc -static -fno-optimize-sibling-calls -fno-strict-aliasing -fno-asm -lm -s -O2 -m32 -o {problem_id} {problem_id}.c",

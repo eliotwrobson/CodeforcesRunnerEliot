@@ -465,7 +465,3 @@ def start_problem(
     shutil.copy(starter_file_path, desired_file_path)
 
     print(f'New source file "{desired_file_path}" has been created.')
-
-
-if __name__ == "__main__":
-    cli()

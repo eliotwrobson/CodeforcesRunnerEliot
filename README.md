@@ -43,7 +43,7 @@ $ ecfr init
 Now that we have starter files and a basic config, we need to download the contest.
 We can download contest 198 using the following command.
 ```sh
-$ ecfr dc -c 198
+$ ecfr dc 198
 ```
 To download just problem A, we can add the `-p A` arguments. This creates a
 `.xml` for each problem downloaded, including the sample test cases.
@@ -80,7 +80,7 @@ appropriate programming language. If you are using Python 3, be sure and submit 
 as this generally runs much faster.
 
 ## Configurations
-The file `conf.json' contains the used compile and execute commands. More commands
+The file `conf.json` contains the used compile and execute commands. More commands
 can be added for different languages. In addition, names of directories for source files,
 contest files, and executables can be changed.
 

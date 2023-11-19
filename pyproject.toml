@@ -14,6 +14,12 @@ exclude = [
     "src/ecfr/example/starter_files/starter.py"
 ]
 
+[tool.poetry.urls]
+homepage = "https://github.com/eliotwrobson/CodeforcesRunnerEliot"
+documentation = "https://github.com/eliotwrobson/CodeforcesRunnerEliot#readme"
+repository = "https://github.com/eliotwrobson/CodeforcesRunnerEliot"
+changelog = "https://github.com/eliotwrobson/CodeforcesRunnerEliot/releases"
+
 [tool.poetry.scripts]
 ecfr = "ecfr.ecfr:cli"
 

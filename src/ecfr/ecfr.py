@@ -477,7 +477,7 @@ def start_problem(
 def init() -> None:
     """Copy example files into the current working directory."""
 
-    example_dir = os.path.join(files("ecfr"), "example")
+    example_dir = os.path.join(str(files("ecfr")), "example")
     current_dir = os.getcwd()
     copy_loc = shutil.copytree(
         example_dir,

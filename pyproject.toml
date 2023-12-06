@@ -8,11 +8,7 @@ readme = "README.md"
 packages = [
     {include = "ecfr", from = "src"}
 ]
-# TODO figure out how to prevent creating pycache directory here
-# or improve the copy operation.
-exclude = [
-    "src/ecfr/example/starter_files/starter.py"
-]
+
 
 [tool.poetry.urls]
 homepage = "https://github.com/eliotwrobson/CodeforcesRunnerEliot"

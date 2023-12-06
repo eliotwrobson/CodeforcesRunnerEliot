@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 import typing as t
+from importlib.resources import files
 
 import bs4
 import click
@@ -476,17 +477,7 @@ def start_problem(
 def init() -> None:
     """Copy example files into the current working directory."""
 
-    # Based on example from here:
-    # https://docs.python.org/3/library/pkgutil.html#pkgutil.get_data
-    module_loc = sys.modules["ecfr"].__file__
-
-    if module_loc is None:
-        raise FileNotFoundError(
-            "Could not find local example files to initialize from."
-        )
-
-    pkg_dir = os.path.dirname(module_loc)
-    example_dir = os.path.join(pkg_dir, "example")
+    example_dir = os.path.join(files("ecfr"), "example")
     current_dir = os.getcwd()
     copy_loc = shutil.copytree(example_dir, current_dir, dirs_exist_ok=True)
 

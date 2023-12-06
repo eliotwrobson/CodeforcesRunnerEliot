@@ -9,7 +9,7 @@ Also includes starter files. Meant to be a "batteries included"
 way of doing Codeforces contests.
 
 ## Installation
-The package is available on PyPI [here](https://pypi.org/). It can
+The package is available on [PyPI](https://pypi.org/project/ecfr/). It can
 be installed with the following command:
 ```sh
 pip install ecfr

@@ -479,6 +479,11 @@ def init() -> None:
 
     example_dir = os.path.join(files("ecfr"), "example")
     current_dir = os.getcwd()
-    copy_loc = shutil.copytree(example_dir, current_dir, dirs_exist_ok=True)
+    copy_loc = shutil.copytree(
+        example_dir,
+        current_dir,
+        dirs_exist_ok=True,
+        ignore=lambda _, names: [name for name in names if name.startswith("__")],
+    )
 
     print(f'Copied example directory into "{copy_loc}"')

@@ -91,3 +91,4 @@ has been done and more test cases have been added, we will proceed with a full r
 ## Acknowledgements
 Thanks to [sayuan](https://github.com/sayuan) and all of the contributors to the original
 [CodeforcesRunner](https://github.com/sayuan/CodeforcesRunner) project.
+Additional thanks to [dhashe](https://github.com/dhashe) for help testing this project.

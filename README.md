@@ -69,7 +69,7 @@ To do this, we simply run the following command:
 ```sh
 $ ecfr r A
 ```
-Wit this command, `ecfr` will look in the `source_files` directory for files matching problem
+With this command, `ecfr` will look in the `source_files` directory for files matching problem
 A. When a file is found, it will automatically compile and run it against all test cases in
 the `A.xml` file.
 

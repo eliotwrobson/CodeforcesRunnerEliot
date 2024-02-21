@@ -31,7 +31,7 @@ class Executer(object):
     def __init__(
         self,
         *,
-        compile_command: str | None,
+        compile_command: t.Optional[str],
         execute_command: str,
         problem_id: str,
         source_file_dir: str,
@@ -60,7 +60,7 @@ class Executer(object):
             shell=True,
         )
 
-    def execute(self, input_str: str) -> tuple[str, str, int, float, bool]:
+    def execute(self, input_str: str) -> t.Tuple[str, str, int, float, bool]:
         """Execute the subprocess. Returns None in case of a timeout"""
         execute_command = self.execute_command.format(
             output_file=self.output_file, source_file=self.source_file
@@ -104,10 +104,10 @@ class Executer(object):
 
 
 def get_parser_for_page(
-    contest_id: int, problem_id: str | None = None
-) -> tuple[bs4.BeautifulSoup, str]:
+    contest_id: int, problem_id: t.Optional[str] = None
+) -> t.Tuple[bs4.BeautifulSoup, str]:
     if problem_id is None:
-        url_tuple: tuple[str, ...] = (CODEFORCES_URL, "contest", str(contest_id))
+        url_tuple: t.Tuple[str, ...] = (CODEFORCES_URL, "contest", str(contest_id))
     else:
         url_tuple = (
             CODEFORCES_URL,
@@ -124,7 +124,7 @@ def get_parser_for_page(
     return parser, contest_url
 
 
-def get_problem_ids(contest_id: int) -> list[str]:
+def get_problem_ids(contest_id: int) -> t.List[str]:
     parser, _ = get_parser_for_page(contest_id)
     table = parser.find("table", {"class": "problems"})
 
@@ -199,7 +199,7 @@ def cli(context: click.Context, config_file_name: str) -> None:
 )
 @click.pass_context
 def download_contest(
-    context: click.Context, contest_id: int, problem_id: ProblemType | None
+    context: click.Context, contest_id: int, problem_id: t.Optional[ProblemType]
 ) -> None:
     """
     Download contest or individual problems.
@@ -363,7 +363,7 @@ def run(context: click.Context, problem_id: ProblemType) -> None:
 
 
 def print_center_separated(
-    target_str: str, width: int = 100, color_addons: list[str] = [], delim: str = "="
+    target_str: str, width: int = 100, color_addons: t.List[str] = [], delim: str = "="
 ) -> None:
     rem_width = (width - len(target_str)) // 2
     side_thing = delim * (rem_width - 1)

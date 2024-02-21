@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ecfr"
-version = "0.1.0"
+version = "0.1.1"
 description = "A package to make CodeForces contests easier."
 authors = ["Eliot Robson <eliot.robson24@gmail.com>"]
 license = "MIT"

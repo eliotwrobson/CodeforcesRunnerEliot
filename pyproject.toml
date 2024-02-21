@@ -11,10 +11,10 @@ packages = [
 
 
 [tool.poetry.urls]
-homepage = "https://github.com/eliotwrobson/CodeforcesRunnerEliot"
-documentation = "https://github.com/eliotwrobson/CodeforcesRunnerEliot#readme"
-repository = "https://github.com/eliotwrobson/CodeforcesRunnerEliot"
-changelog = "https://github.com/eliotwrobson/CodeforcesRunnerEliot/releases"
+Homepage = "https://github.com/eliotwrobson/CodeforcesRunnerEliot"
+Documentation = "https://github.com/eliotwrobson/CodeforcesRunnerEliot#readme"
+Repository = "https://github.com/eliotwrobson/CodeforcesRunnerEliot"
+Changelog = "https://github.com/eliotwrobson/CodeforcesRunnerEliot/releases"
 
 [tool.poetry.scripts]
 ecfr = "ecfr.ecfr:cli"

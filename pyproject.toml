@@ -20,12 +20,12 @@ changelog = "https://github.com/eliotwrobson/CodeforcesRunnerEliot/releases"
 ecfr = "ecfr.ecfr:cli"
 
 [tool.poetry.dependencies]
-python = ">=3.8"
-colorama = "^0.4"
-click = "^8"
-beautifulsoup4 = "^4"
-lxml = "^4"
-requests = "^2"
+python = ">=3.8.1"
+colorama = ">=0.4"
+click = ">=8"
+beautifulsoup4 = ">=4"
+lxml = ">=4"
+requests = ">=2"
 
 # Define dev dependencies and make optional
 [tool.poetry.group.dev]
